@@ -1,6 +1,7 @@
+"use client";
 import { useWalletConnection } from "@solana/react-hooks";
 
-export default function App() {
+export default function Home() {
   const { connectors, connect, disconnect, wallet, status } =
     useWalletConnection();
 
@@ -83,7 +84,7 @@ export default function App() {
               <div>
                 <a
                   className="font-medium underline underline-offset-2"
-                  href="https://github.com/solana-foundation/solana-kit/tree/main/packages/react-hooks"
+                  href="https://github.com/solana-foundation/framework-kit/tree/main/packages/react-hooks"
                   target="_blank"
                   rel="noreferrer"
                 >

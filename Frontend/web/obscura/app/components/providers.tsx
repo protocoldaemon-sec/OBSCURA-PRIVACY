@@ -1,5 +1,8 @@
+"use client";
+
 import { SolanaProvider } from "@solana/react-hooks";
 import { PropsWithChildren } from "react";
+
 import { autoDiscover, createClient } from "@solana/client";
 
 const client = createClient({
