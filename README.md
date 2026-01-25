@@ -32,21 +32,23 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 
 - **Zero-Knowledge Proofs** - Transaction details hidden while maintaining verifiability
 - **Stealth Addresses** - Unlinkable one-time addresses for each transaction
-- **WOTS+ Post-Quantum Signatures** - Future-proof cryptographic security
+- **WOTS+ Post-Quantum Signatures** - Future-proof cryptographic security (2208 bytes)
 - **Encrypted Order Flow** - MEV protection and front-running prevention
+- **Pedersen Commitments** - Cryptographic hiding of amounts and prices
 
 ### 💱 Trading Infrastructure
 
-- **Dark Pool Trading** - Private order matching via Arcium MPC
-- **OTC RFQ System** - Privacy-preserving Request for Quote trading
-- **Cross-Chain Bridge** - Seamless multi-chain asset transfers
-- **Silent Swap** - Private, non-custodial token swaps
+- **Dark Pool Trading** - Private order matching via Arcium MPC with sub-100ms matching
+- **OTC RFQ System** - Privacy-preserving Request for Quote trading with encrypted order books
+- **Cross-Chain Bridge** - Seamless multi-chain asset transfers (Relay.link & deBridge)
+- **Silent Swap** - Private, non-custodial token swaps with hidden sender-recipient links
 
 ### 🛡️ Compliance & Security
 
-- **Regulatory Compliance** - Address screening via Range API
-- **Relayer Network** - Private transaction submission
+- **Regulatory Compliance** - Address screening via Range API for sanctions & blacklists
+- **Relayer Network** - Private transaction submission through Obscura infrastructure
 - **Off-Chain Balance Tracking** - Encrypted balance management via Arcium cSPL
+- **ZK Compression** - 1000x cheaper Solana storage via Light Protocol
 
 ## Architecture
 
@@ -55,24 +57,30 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 │                          OBSCURA                                  │
 ├───────────────────────────────────────────────────────────────────┤
 │  Frontend                                                         │
-│  ├── Web App (Next.js + Tailwind + Solana React Hooks)           │
-│  └── Mobile App (Expo + React Native + Mobile Wallet Adapter)    │
+│  ├── Web Dashboard (Next.js + Tailwind + Solana React Hooks)     │
+│  ├── Landing Page (Next.js 14 + TypeScript)                      │
+│  ├── Documentation Site (Next.js)                                │
+│  └── Mobile App (Expo 54 + React Native + Mobile Wallet Adapter) │
 ├───────────────────────────────────────────────────────────────────┤
 │  Backend Services                                                 │
-│  ├── darkPool      → MPC-based private order matching            │
-│  ├── darkOTC       → Privacy-preserving RFQ system               │
+│  ├── darkPool      → MPC-based private order matching (Redis)    │
+│  ├── darkOTC       → Privacy-preserving RFQ system (Supabase)    │
 │  ├── darkSwap      → Private cross-chain swaps & bridge          │
-│  └── Compliance    → Address compliance checking                 │
+│  ├── vault         → Post-quantum secure privacy protocol        │
+│  └── Compliance    → Address compliance checking (Range API)     │
 ├───────────────────────────────────────────────────────────────────┤
 │  Privacy Infrastructure                                           │
-│  ├── Arcium SDK    → MPC encrypted computation                   │
-│  ├── Light Protocol→ ZK compression (1000x storage savings)      │
-│  ├── WOTS+         → Post-quantum signatures                     │
-│  └── Elusiv        → Private settlement layer                    │
+│  ├── Arcium SDK v0.6.3  → MPC encrypted computation               │
+│  ├── Light Protocol     → ZK compression (1000x storage savings) │
+│  ├── WOTS+              → Post-quantum signatures                │
+│  ├── SilentSwap SDK     → Private cross-chain swaps              │
+│  └── Elusiv             → Private settlement layer               │
 ├───────────────────────────────────────────────────────────────────┤
 │  Blockchain Layer                                                 │
 │  ├── Solana Devnet                                               │
-│  └── Ethereum Sepolia                                            │
+│  ├── Ethereum Sepolia                                            │
+│  ├── Polygon, Arbitrum, Avalanche (via SilentSwap)               │
+│  └── Multi-chain support (CAIP-10 & CAIP-19)                     │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,18 +88,21 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 
 ### Backend
 
-| Component                                        | Description                                                                     | Tech Stack                     |
-| ------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------ |
-| **[darkPool](./Backend/darkPool)**               | Production-ready dark pool trading with encrypted order matching via Arcium MPC | Node.js, Redis, Solana, Arcium |
-| **[darkOTC](./Backend/darkOTC)**                 | Privacy-preserving RFQ system with stealth addresses and WOTS+ signatures       | Express, TypeScript, Supabase  |
-| **[darkSwap&Bridge](./Backend/darkSwap&Bridge)** | Cross-chain bridging and private swaps using SilentSwap SDK                     | Node.js, SilentSwap SDK        |
-| **[Compliance](./Backend/Compliance)**           | Address compliance checking against Range API for sanctions & blacklists        | Node.js, Range API             |
+| Component                                        | Description                                                                     | Tech Stack                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------- |
+| **[darkPool](./Backend/darkPool)**               | Production-ready dark pool trading with encrypted order matching via Arcium MPC | Node.js, Redis, Solana, Arcium     |
+| **[darkOTC](./Backend/darkOTC)**                 | Privacy-preserving RFQ system with stealth addresses and WOTS+ signatures       | Express, TypeScript, Supabase      |
+| **[darkSwap&Bridge](./Backend/darkSwap&Bridge)** | Cross-chain bridging and private swaps using SilentSwap SDK                     | Node.js, SilentSwap SDK, MCP Server|
+| **[vault](./Backend/vault)**                     | Post-quantum secure privacy protocol with WOTS+ and stealth addresses          | Next.js, Hono, Anchor, Foundry     |
+| **[Compliance](./Backend/Compliance)**           | Address compliance checking against Range API for sanctions & blacklists        | Node.js, Range API                 |
 
 ### Frontend
 
 | Component                                            | Description                                       | Tech Stack                                           |
 | ---------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| **[Web App](./Frontend/web/obscura)**                | Modern web interface for OBSCURA DeFi operations  | Next.js 16, React 19, Tailwind 4, Solana React Hooks |
+| **[Dashboard](./Frontend/web/dashboard)**            | Web dashboard for OBSCURA DeFi operations         | Next.js, React, Tailwind                             |
+| **[Landing Page](./Frontend/web/obscura-landing)**   | Modern landing page                               | Next.js 14, TypeScript, TailwindCSS                  |
+| **[Documentation](./Frontend/web/obscura-docs)**     | Project documentation site                        | Next.js                                               |
 | **[Mobile App](./Frontend/mobile-app/obscura-dapp)** | Native mobile application with wallet integration | Expo 54, React Native, Mobile Wallet Adapter         |
 
 ## Getting Started
@@ -99,8 +110,9 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 ### Prerequisites
 
 - Node.js v18+
-- npm v9+
+- npm v9+ or pnpm
 - Redis (for darkPool)
+- Supabase account (for darkOTC)
 - Solana CLI (optional, for development)
 - Docker (optional, for containerized deployment)
 
@@ -109,7 +121,7 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/Daemon-protocol/OBSCURA-PRIVACY.git
+   git clone https://github.com/mzf11125/OBSCURA-PRIVACY.git
    cd OBSCURA-PRIVACY
    ```
 
@@ -120,19 +132,27 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
    cd Backend/darkPool
    npm install
    cp .env.example .env
+   redis-server
    npm start
 
    # Dark OTC
    cd Backend/darkOTC
    npm install
    cp .env.example .env
+   # Set up Supabase database (see README.md)
    npm run dev
 
    # Dark Swap & Bridge
    cd Backend/darkSwap&Bridge
+   pnpm install
+   cp .env.example .env
+   pnpm dev
+
+   # Vault
+   cd Backend/vault/obscura-landing
    npm install
    cp .env.example .env
-   npm start
+   npm run dev
 
    # Compliance
    cd Backend/Compliance
@@ -144,15 +164,20 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 3. **Frontend Setup**
 
    ```bash
-   # Web App
-   cd Frontend/web/obscura
+   # Web Dashboard
+   cd Frontend/web/dashboard
+   npm install
+   npm run dev
+
+   # Landing Page
+   cd Frontend/web/obscura-landing
    npm install
    npm run dev
 
    # Mobile App
    cd Frontend/mobile-app/obscura-dapp
    npm install
-   npm run dev
+   npx expo start
    ```
 
 ## Privacy Model
@@ -162,6 +187,7 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 - Asset pairs, directions, amounts, and prices
 - Quote counts and expiration times
 - Transaction timestamps
+- Order book aggregation
 
 ### Hidden (Privacy Protected)
 
@@ -169,6 +195,7 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 - Transaction linkability via WOTS+ one-time signatures
 - Settlement details via ZK proofs
 - On-chain activity via relayer network
+- Order details in dark pool (MPC-encrypted)
 
 ## Technology Stack
 
@@ -186,15 +213,17 @@ OBSCURA is a comprehensive privacy-focused DeFi ecosystem enabling secure, priva
 
 - **Solana Devnet** - Primary chain for high-performance DeFi
 - **Ethereum Sepolia** - EVM compatibility for cross-chain operations
+- **Multi-chain Support** - Polygon, Arbitrum, Avalanche (via SilentSwap)
 
 ## API Documentation
 
 Each backend service includes comprehensive API documentation:
 
-- [Dark Pool API](./Backend/darkPool/README.md#-api-endpoints)
-- [Dark OTC API](./Backend/darkOTC/README.md#api-documentation)
-- [Dark Swap & Bridge API](./Backend/darkSwap&Bridge/README.md#api-endpoints)
-- [Compliance API](./Backend/Compliance/README.md#api-endpoints)
+- [Dark Pool API](./Backend/darkPool/README.md#-api-endpoints) - REST & WebSocket APIs
+- [Dark OTC API](./Backend/darkOTC/README.md#api-documentation) - RFQ operations
+- [Dark Swap & Bridge API](./Backend/darkSwap&Bridge/README.md#-api-endpoints) - Cross-chain swaps
+- [Vault API](./Backend/vault/README.md#-rest-endpoints) - Privacy vault operations
+- [Compliance API](./Backend/Compliance/README.md#api-endpoints) - Address screening
 
 ## Security
 
@@ -209,9 +238,10 @@ Each backend service includes comprehensive API documentation:
 ### Security Features
 
 - MEV protection through encrypted order flow
-- Signature reuse prevention
+- Signature reuse prevention (WOTS+ tracking)
 - Rate limiting and DDoS protection
 - Comprehensive audit logging
+- OFAC & AML compliance
 
 ## Deployment
 
@@ -221,12 +251,17 @@ Each backend service includes comprehensive API documentation:
 # Dark Pool
 cd Backend/darkPool
 docker build -t obscura-darkpool .
-docker run -p 3001:3001 --env-file .env obscura-darkpool
+docker run -p 3001:3001 -p 3003:3003 --env-file .env obscura-darkpool
 
 # Dark OTC
 cd Backend/darkOTC
 docker build -t obscura-darkotc .
 docker run -p 3000:3000 --env-file .env obscura-darkotc
+
+# Vault
+cd Backend/vault
+docker build -t obscura-vault .
+docker run -p 3000:3000 --env-file .env obscura-vault
 ```
 
 ### Railway
@@ -234,6 +269,21 @@ docker run -p 3000:3000 --env-file .env obscura-darkotc
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app)
 
 See individual component READMEs for detailed deployment instructions.
+
+## MCP Integration
+
+The darkSwap&Bridge component includes a Model Context Protocol (MCP) server for AI assistant integration:
+
+```bash
+cd Backend/darkSwap&Bridge/mcp
+pwsh setup.ps1  # Windows
+# or
+bash setup.sh   # Linux/Mac
+```
+
+Supported AI assistants: Claude Desktop, Kiro IDE, any MCP-compatible client.
+
+See [MCP Guide](./Backend/darkSwap&Bridge/Docs/MCP_GUIDE.md) for details.
 
 ## Contributing
 
@@ -251,7 +301,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Disclaimer
 
-⚠️ **This is a testnet/devnet implementation for development and testing purposes. Do not use with real funds on mainnet without proper security audits.**
+This is a testnet/devnet implementation for development and testing purposes. Do not use with real funds on mainnet without proper security audits.
 
 ## Links
 
@@ -264,5 +314,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  Built with ❤️ by <a href="https://github.com/Daemon-protocol">Daemon Protocol</a>
+  Built with privacy in mind. Secured by quantum-resistant cryptography.
 </p>
