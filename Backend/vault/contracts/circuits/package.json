@@ -1,0 +1,22 @@
+{
+  "name": "@obscura/circuits",
+  "version": "0.1.0",
+  "description": "ZK circuits for Obscura private claims",
+  "scripts": {
+    "compile": "circom claim.circom --r1cs --wasm --sym -o build",
+    "setup": "snarkjs groth16 setup build/claim.r1cs pot12_final.ptau build/claim_0000.zkey",
+    "contribute": "snarkjs zkey contribute build/claim_0000.zkey build/claim_final.zkey --name=\"Obscura\" -v",
+    "export-vkey": "snarkjs zkey export verificationkey build/claim_final.zkey build/verification_key.json",
+    "export-solidity": "snarkjs zkey export solidityverifier build/claim_final.zkey build/ClaimVerifier.sol",
+    "build": "npm run compile && npm run setup && npm run contribute && npm run export-vkey",
+    "prove": "snarkjs groth16 prove build/claim_final.zkey build/claim_js/witness.wtns build/proof.json build/public.json",
+    "verify": "snarkjs groth16 verify build/verification_key.json build/public.json build/proof.json"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "snarkjs": "^0.7.4"
+  },
+  "devDependencies": {
+    "circom": "^2.1.9"
+  }
+}

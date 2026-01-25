@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "start": "cd backend && node packages/backend/dist/server.js",
+    "start:simple": "node simple-server.js",
+    "build": "cd backend && npm run build",
+    "build:backend": "cd backend && pnpm install && pnpm run build"
+  },
+  "dependencies": {
+    "@react-navigation/native": "^7.1.27",
+    "@react-navigation/native-stack": "^7.9.1",
+    "cors": "^2.8.6",
+    "expo": "^54.0.31",
+    "expo-linear-gradient": "^15.0.8",
+    "express": "^5.2.1",
+    "gsap": "^3.14.2",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "^4.19.0",
+    "three": "^0.182.0"
+  }
+}

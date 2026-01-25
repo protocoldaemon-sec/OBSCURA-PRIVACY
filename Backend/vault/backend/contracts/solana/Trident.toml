@@ -1,0 +1,22 @@
+[fuzz]
+# Fuzzing iterations
+fuzzing_with_stats = true
+allow_duplicate_txs = false
+# Timeout in seconds
+timeout = 10
+# Number of iterations
+iterations = 10000
+
+[test]
+# Validator settings
+validator_startup_timeout = 15000
+
+[honggfuzz]
+# Honggfuzz specific settings
+timeout = 10
+iterations = 10000
+threads = 4
+keep_output = false
+verbose = false
+exit_upon_crash = true
+mutations_per_run = 6

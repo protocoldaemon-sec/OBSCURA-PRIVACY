@@ -1,0 +1,50 @@
+### Obscura Swap API Manual Tests
+### Use with REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:3000
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Get Supported Assets
+GET {{baseUrl}}/api/swap/assets
+
+### 3. Get Quote - Ethereum to Avalanche (1 USDC)
+GET {{baseUrl}}/api/swap/quote?fromChainId=1&toChainId=43114&fromToken=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&toToken=0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E&amount=1000000&userAddress=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+
+### 4. Get Quote - Polygon to Arbitrum (5 USDC)
+GET {{baseUrl}}/api/swap/quote?fromChainId=137&toChainId=42161&fromToken=0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174&toToken=0xaf88d065e77c8cC2239327C5EDb3A432268e5831&amount=5000000&userAddress=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+
+### 5. Get Quote - Ethereum to Polygon (10 USDC)
+GET {{baseUrl}}/api/swap/quote?fromChainId=1&toChainId=137&fromToken=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&toToken=0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174&amount=10000000&userAddress=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+
+### 6. Invalid Quote - Missing Parameters (Should Fail)
+GET {{baseUrl}}/api/swap/quote?fromChainId=1
+
+### 7. Webhook - Swap Status Update
+POST {{baseUrl}}/api/webhooks/swap-status
+Content-Type: application/json
+
+{
+  "swapId": "test-swap-123",
+  "status": "pending",
+  "txHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "timestamp": "2025-01-22T10:00:00Z"
+}
+
+### 8. Webhook - Swap Complete
+POST {{baseUrl}}/api/webhooks/swap-status
+Content-Type: application/json
+
+{
+  "swapId": "test-swap-456",
+  "status": "success",
+  "txHash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+  "timestamp": "2025-01-22T10:05:00Z"
+}
+
+### 9. Get Quote - Native ETH to USDC
+GET {{baseUrl}}/api/swap/quote?fromChainId=1&toChainId=43114&fromToken=0x0000000000000000000000000000000000000000&toToken=0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E&amount=1000000000000000000&userAddress=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+
+### 10. Get Quote - Large Amount (100 USDC)
+GET {{baseUrl}}/api/swap/quote?fromChainId=1&toChainId=43114&fromToken=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&toToken=0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E&amount=100000000&userAddress=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb

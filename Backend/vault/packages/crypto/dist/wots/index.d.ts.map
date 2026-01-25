@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../src/wots/index.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AAEH,OAAO,EAAE,UAAU,EAAE,UAAU,EAAE,MAAM,aAAa,CAAC;AACrD,OAAO,EAAE,cAAc,EAAE,MAAM,kBAAkB,CAAC;AAClD,OAAO,EAAE,iBAAiB,EAAE,cAAc,EAAE,MAAM,aAAa,CAAC;AAChE,YAAY,EAAE,UAAU,EAAE,aAAa,EAAE,cAAc,EAAE,aAAa,EAAE,MAAM,aAAa,CAAC"}

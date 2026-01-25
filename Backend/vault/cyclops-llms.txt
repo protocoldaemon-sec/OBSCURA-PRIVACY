@@ -1,0 +1,248 @@
+# CYCLOPS-BE API Documentation for LLMs
+# Wallet Graph Analyzer - Cryptocurrency Risk Analysis
+
+## Overview
+Cyclops-BE analyzes cryptocurrency wallets to detect risk by integrating multiple data sources:
+- Daemon Labeller (entity labels)
+- Daemon OFAC (sanctions screening)
+- Risk Engine (ETH risk analysis)
+- Helius (Solana transactions)
+- Etherscan (ETH/EVM transactions)
+
+Base URL: https://cyclops-api.daemonprotocol.com
+
+---
+
+## ENDPOINTS
+
+### 1. POST /api/v1/analyze
+Analyze a wallet address or entity name.
+
+Request Body (JSON):
+{
+  "input": "string",        // REQUIRED: Wallet address or entity name
+  "maxDepth": 1-5,          // OPTIONAL: Enrichment depth (default: 3)
+  "forceRefresh": boolean   // OPTIONAL: Bypass cache (default: false)
+}
+
+Supported Input Types:
+- Ethereum address: 0x... (42 chars)
+- Solana address: Base58 (32-44 chars)
+- Bitcoin address: bc1..., 1..., 3...
+- Entity name: "Lazarus Group", "Binance", etc.
+
+Example Requests:
+- Solana: {"input": "55ZNPyNU8rPoin41G5mkYugi1nAvWC1YSaGh7zMW92Gi", "maxDepth": 3}
+- ETH: {"input": "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b", "maxDepth": 3}
+- Entity: {"input": "Lazarus Group", "maxDepth": 3}
+
+### 2. GET /api/v1/analyze/{input}
+Quick analysis via URL parameter.
+
+Parameters:
+- input (path): Wallet address or entity name
+- maxDepth (query): 1-5, default 3
+- forceRefresh (query): true/false, default false
+
+Example: GET /api/v1/analyze/0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b?maxDepth=3
+
+### 3. GET /api/v1/health
+Health check endpoint.
+
+Parameters:
+- detailed (query): true for full service status
+
+### 4. GET /api/v1/health/live
+Kubernetes liveness probe.
+
+### 5. GET /api/v1/health/ready
+Kubernetes readiness probe.
+
+---
+
+## RESPONSE STRUCTURE
+
+Success Response:
+{
+  "success": true,
+  "data": {
+    "address": "string",           // Analyzed address (lowercase)
+    "chain": "ETHEREUM|SOLANA|BITCOIN|TRC|OTHER",
+    "entity": "string|null",       // Entity name if known
+    "riskScore": 0-100,            // Composite risk score
+    "riskLevel": "NO_RISK|INFORMATIONAL|LOW|MEDIUM|HIGH|CRITICAL",
+    "riskLevelDescription": "string",
+    "sanctions": {...},            // Sanctions info
+    "labels": {...},               // Labels info
+    "graph": {...},                // Relationship graph
+    "metadata": {...}              // Analysis metadata
+  }
+}
+
+---
+
+## RISK LEVELS
+
+| Level         | Score Range | Description                          |
+|---------------|-------------|--------------------------------------|
+| NO_RISK       | 0           | No risk detected                     |
+| INFORMATIONAL | 1-25        | Minimal concerns                     |
+| LOW           | 26-40       | Minor concerns, generally safe       |
+| MEDIUM        | 41-55       | Moderate risk, review recommended    |
+| HIGH          | 56-75       | Significant risk, caution advised    |
+| CRITICAL      | 76-100      | Severe risk, likely sanctioned       |
+
+---
+
+## SANCTIONS INFO
+
+{
+  "isSanctioned": boolean,
+  "programs": ["DPRK3", "IRAN", ...],
+  "matchedEntities": [
+    {
+      "id": "sdn-27307",
+      "name": "LAZARUS GROUP",
+      "type": "organization",
+      "source": "SDN",
+      "aliases": ["HIDDEN COBRA", ...]
+    }
+  ]
+}
+
+---
+
+## LABELS INFO
+
+{
+  "categories": ["EXCHANGE", "MIXER", "SCAM", "HACKER", "TERRORIST", ...],
+  "attributes": ["HOT WALLET", "SANCTIONED", "ATTACKER", "MIXING", ...],
+  "riskIndicators": ["SANCTIONED", "SCAM", "MIXING", "ATTACK", ...],
+  "riskType": "CRITICAL|HIGH|MEDIUM|LOW|INFORMATIONAL|null",
+  "sources": ["labeller", "ofac", "riskEngine", "etherscan", "helius"]
+}
+
+Risk Categories (High Risk):
+- SCAM, TERRORIST, HACKER, DARK MARKET, MIXER, RANSOMWARE, GAMBLING
+
+Risk Attributes (High Risk):
+- SANCTIONED, ATTACKER, LAUNDERING, EXPLOIT, RUGPULL, BLOCKED, SUSPICIOUS
+
+---
+
+## GRAPH DATA
+
+{
+  "nodes": [
+    {
+      "id": "wallet:0x...",
+      "type": "WALLET|ENTITY|TOKEN|SANCTION",
+      "label": "Binance Hot Wallet",
+      "address": "0x...",
+      "riskScore": 25,
+      "properties": {
+        "chain": "ETHEREUM",
+        "categories": ["EXCHANGE"],
+        "attributes": ["HOT WALLET"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "entity:binance:wallet:0x...:owns",
+      "source": "entity:binance",
+      "target": "wallet:0x...",
+      "type": "TRANSFER|OWNS|INTERACTS|SANCTIONED_BY",
+      "weight": 1000000,
+      "properties": {
+        "totalValue": 1000000,
+        "txCount": 50,
+        "direction": "incoming|outgoing"
+      }
+    }
+  ]
+}
+
+Node Types:
+- WALLET: Cryptocurrency wallet address
+- ENTITY: Known entity (exchange, hacker group, etc.)
+- TOKEN: Token/contract address
+- SANCTION: Sanction program
+
+Edge Types:
+- TRANSFER: Token/coin transfer between wallets
+- OWNS: Entity owns wallet
+- INTERACTS: Wallet interacts with contract
+- SANCTIONED_BY: Entity sanctioned by program
+
+---
+
+## METADATA
+
+{
+  "analyzedAt": "2025-12-14T15:30:00.000Z",
+  "depth": 3,
+  "sourcesQueried": ["labeller", "ofac", "riskEngine", "etherscan"],
+  "incomplete": false,
+  "failedSources": [],
+  "processingTimeMs": 1250
+}
+
+---
+
+## ERROR CODES
+
+| Code                  | HTTP | Description                    |
+|-----------------------|------|--------------------------------|
+| INVALID_INPUT         | 400  | Invalid wallet/entity input    |
+| PLATFORM_ERROR        | 500  | External platform error        |
+| RATE_LIMITED          | 429  | Rate limit exceeded            |
+| ALL_PLATFORMS_FAILED  | 503  | All data sources unavailable   |
+| INTERNAL_ERROR        | 500  | Internal server error          |
+| NOT_FOUND             | 404  | Resource not found             |
+
+Error Response:
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "Validation error",
+    "details": [{"path": "input", "message": "Input is required"}]
+  }
+}
+
+---
+
+## DEPTH PARAMETER
+
+maxDepth controls how deep the transaction tracing goes:
+- Depth 1: Only main wallet transactions
+- Depth 2: Main + 1st hop counterparties
+- Depth 3: Main + 1st + 2nd hop (default)
+- Depth 4: Main + 1st + 2nd + 3rd hop
+- Depth 5: Main + 1st + 2nd + 3rd + 4th hop
+
+Higher depth = more nodes, longer processing time.
+
+---
+
+## EXAMPLE USE CASES
+
+1. Check if wallet is sanctioned:
+   POST /api/v1/analyze
+   {"input": "0x098b716b8aaf21512996dc57eb0615e2383e2f96"}
+   → Check response.data.sanctions.isSanctioned
+
+2. Get risk score for Solana wallet:
+   GET /api/v1/analyze/55ZNPyNU8rPoin41G5mkYugi1nAvWC1YSaGh7zMW92Gi
+   → Check response.data.riskScore and riskLevel
+
+3. Search entity and get associated wallets:
+   POST /api/v1/analyze
+   {"input": "Lazarus Group", "maxDepth": 5}
+   → Check response.data.graph.nodes for WALLET type nodes
+
+4. Trace transaction flow:
+   POST /api/v1/analyze
+   {"input": "0x...", "maxDepth": 5}
+   → Use response.data.graph.edges with type="TRANSFER"

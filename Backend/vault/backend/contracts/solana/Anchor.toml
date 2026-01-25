@@ -1,0 +1,24 @@
+[toolchain]
+channel = "1.75.0"
+anchor_version = "0.30.0"
+
+[features]
+anchor_lang = ["0.30.0"]
+
+[programs.localnet]
+sip_settlement = "F9H4qhdinmvW73J4TFEDyDiEmnhzt1uWimPeXaQqYdEE"
+sip_vault = "VauLt1111111111111111111111111111111111111"
+
+[programs.devnet]
+sip_settlement = "F9H4qhdinmvW73J4TFEDyDiEmnhzt1uWimPeXaQqYdEE"
+sip_vault = "VauLt1111111111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

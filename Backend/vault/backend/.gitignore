@@ -1,0 +1,96 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+node_modules/
+/packages/*/node_modules
+examples/node_modules
+
+# Build outputs
+dist/
+build/
+out/
+*.js.map
+*.d.ts.map
+
+# Next.js
+.next/
+
+# Foundry / EVM
+contracts/evm/cache/
+contracts/evm/out/
+contracts/evm/broadcast/
+contracts/evm/.gas-snapshot
+
+# Solana / Anchor
+contracts/solana/target/
+contracts/solana/.anchor/
+contracts/solana/test-ledger/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Vercel
+.vercel
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Secrets / Keys (NEVER commit these)
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/
+private-keys/
+
+# Light Protocol keypairs
+light-payer.json
+**/light-payer.json
+
+# Local config overrides
+*.local
+*.local.*
+
+# Lock files (optional - some teams commit these)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

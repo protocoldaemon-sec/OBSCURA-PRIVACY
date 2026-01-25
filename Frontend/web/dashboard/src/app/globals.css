@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Aeonik Pro Font for Titles */
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('/font-title/AeonikPro-Trial/AeonikProTRIAL-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('/font-title/AeonikPro-Trial/AeonikProTRIAL-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('/font-title/AeonikPro-Trial/AeonikProTRIAL-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Blauer Nue Font for Landing */
+@font-face {
+  font-family: 'Blauer Nue';
+  src: url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Regular.woff2') format('woff2'),
+       url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Blauer Nue';
+  src: url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Medium.woff2') format('woff2'),
+       url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Blauer Nue';
+  src: url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-SemiBold.woff2') format('woff2'),
+       url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Blauer Nue';
+  src: url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Bold.woff2') format('woff2'),
+       url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Blauer Nue';
+  src: url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-ExtraBold.woff2') format('woff2'),
+       url('/font-landing/Blauer Nue Downloads/TrueType/BlauerNue-ExtraBold.woff') format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --background: #000000;
+  --foreground: #FFFFFF;
+  --brand-primary: #892CDC;
+  --brand-secondary: #52057B;
+  --brand-accent: #BC6FF1;
+  --font-title: 'Aeonik Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-landing: 'Blauer Nue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-dashboard: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Title font class */
+.font-title {
+  font-family: var(--font-title);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1A1A24;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #892CDC;
+}
+
+/* Gradient text - Updated colors */
+.gradient-text {
+  background: linear-gradient(135deg, #892CDC 0%, #BC6FF1 50%, #892CDC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(13, 13, 18, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(137, 44, 220, 0.1);
+}
+
+.glass:hover {
+  border-color: rgba(137, 44, 220, 0.3);
+}
+
+/* Glow effect - Updated color */
+.glow-purple {
+  box-shadow: 0 0 40px rgba(137, 44, 220, 0.4);
+}
+
+/* Grid background */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(137, 44, 220, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(137, 44, 220, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Noise texture overlay */
+.noise {
+  position: relative;
+}
+
+.noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+}
+
+/* Wallet adapter styles override */
+.wallet-adapter-button {
+  background: linear-gradient(135deg, #892CDC 0%, #52057B 100%) !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+
+.wallet-adapter-button:hover {
+  background: linear-gradient(135deg, #BC6FF1 0%, #892CDC 100%) !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+.wallet-adapter-modal-container {
+  background: #0D0D12 !important;
+  border: 1px solid rgba(137, 44, 220, 0.2) !important;
+  border-radius: 16px !important;
+}
+
+.wallet-adapter-modal-title {
+  color: #FFFFFF !important;
+}
+
+.wallet-adapter-modal-list li {
+  background: #0A0A0F !important;
+  border: 1px solid #1A1A24 !important;
+}
+
+.wallet-adapter-modal-list li:hover {
+  border-color: #892CDC !important;
+}
+
+/* Button gradient */
+.btn-gradient {
+  background: linear-gradient(135deg, #52057B 0%, #892CDC 50%, #BC6FF1 100%);
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(137, 44, 220, 0.2);
+}
+
+/* Purple glow animation */
+@keyframes purple-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(137, 44, 220, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(188, 111, 241, 0.5);
+  }
+}
+
+.purple-pulse {
+  animation: purple-pulse 2s ease-in-out infinite;
+}

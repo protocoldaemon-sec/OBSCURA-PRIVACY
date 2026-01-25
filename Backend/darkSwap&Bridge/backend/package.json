@@ -1,0 +1,34 @@
+{
+	"name": "obscura-swap-backend",
+	"version": "1.0.0",
+	"description": "Obscura Swap Backend - Privacy-focused cross-chain swap API",
+	"main": "src/index.js",
+	"type": "module",
+	"scripts": {
+		"start": "node src/index.js",
+		"dev": "node --watch src/index.js",
+		"test:imports": "node examples/test-imports.js",
+		"test:api": "node test/api-test.js",
+		"test:curl": "bash test/curl-test.sh",
+		"example:bridge": "node examples/node-backend-example.js bridge",
+		"example:silent": "node examples/node-backend-example.js silent"
+	},
+	"keywords": [
+		"silentswap",
+		"cross-chain",
+		"privacy",
+		"swap",
+		"bridge",
+		"defi"
+	],
+	"author": "",
+	"license": "MIT",
+	"dependencies": {
+		"@silentswap/sdk": "^0.0.52",
+		"express": "^4.18.2",
+		"cors": "^2.8.5",
+		"dotenv": "^16.3.1",
+		"viem": "^2.0.0",
+		"bignumber.js": "^9.1.2"
+	}
+}

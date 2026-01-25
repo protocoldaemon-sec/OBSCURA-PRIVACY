@@ -33,6 +33,12 @@ RUN npm ci --only=production && \
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy vendored WOTS JavaScript file (not compiled by TypeScript)
+COPY --from=builder /app/src/utils/wots-vendor.js ./dist/utils/wots-vendor.js
+
+# Copy necessary files
+COPY --from=builder /app/node_modules ./node_modules
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
