@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('./assets/font/Aeonik/Aeonik/AeonikPro-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('./assets/font/Aeonik/Aeonik/AeonikPro-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('./assets/font/Aeonik/Aeonik/AeonikPro-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Aeonik Pro';
+  src: url('./assets/font/Aeonik/Aeonik/AeonikPro-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Dot Matrix';
+  src: url('./assets/font/Dot Matrix/DotMatrix Two.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Aeonik Pro', 'Arial', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #000;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Custom font classes */
+  .font-aeonik {
+    font-family: 'Aeonik Pro', 'Arial', sans-serif;
+  }
+
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .font-manrope {
+    font-family: 'Manrope', sans-serif;
+  }
+
+  .font-inter {
+    font-family: 'Inter Display', 'Inter', sans-serif;
+  }
+
+  .font-dotmatrix {
+    font-family: 'Dot Matrix', monospace;
+  }
+
+  /* Fix button pointer events */
+  button {
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  /* Radar pulse animation - smooth expand wave */
+  @keyframes radarPulse {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.5);
+    }
+    30% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.5);
+    }
+  }
+
+  .animate-radar-pulse {
+    animation: radarPulse 3.4s linear infinite;
+  }
+
+  /* Marquee animation for partners */
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 20s linear infinite;
+  }
+}

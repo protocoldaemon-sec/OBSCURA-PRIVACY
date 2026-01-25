@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obscura Dark OTC - Trading Board</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(15, 20, 40, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #3b82f6;
+        }
+
+        .info-content {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 30px;
+            min-height: 600px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: rgba(15, 20, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .btn-create {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-create:hover {
+            transform: translateY(-2px);
+        }
+
+        .request-list {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .request-list::-webkit-scrollbar { width: 6px; }
+        .request-list::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 3px; }
+        .request-list::-webkit-scrollbar-thumb { background: rgba(102, 126, 234, 0.5); border-radius: 3px; }
+
+        .request-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .request-item:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateX(3px);
+        }
+
+        .request-item.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .request-pair {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .direction-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .direction-buy { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .direction-sell { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .request-amount {
+            font-size: 0.95em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .request-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .quote-badge {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .detail-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .detail-empty {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .detail-empty-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .request-detail {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .quotes-section {
+            margin-top: 20px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .quote-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .quote-item.best {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .best-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 700;
+        }
+
+        .quote-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .quote-number {
+            font-weight: 700;
+            font-size: 1.05em;
+        }
+
+        .quote-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .quote-preview {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(15, 20, 40, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-close:hover {
+            color: #ffffff;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1em;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-hint {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px;
+        }
+
+        .mode-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 193, 7, 0.9);
+            color: #000;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9em;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .mode-indicator.real {
+            background: rgba(16, 185, 129, 0.9);
+            color: #fff;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert.show { display: block; }
+        .alert-success { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; }
+        .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                <div class="logo-icon">🔒</div>
+                <span>Obscura Dark OTC</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="total-requests">0</div>
+                <div class="stat-label">Active Requests</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-quotes">0</div>
+                <div class="stat-label">Total Quotes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-volume">$0</div>
+                <div class="stat-label">24h Volume</div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-title">ℹ️ How Dark OTC Works</div>
+            <div class="info-content">
+                <strong>Amounts & Prices:</strong> Visible to everyone for fair trading.<br>
+                <strong>Privacy:</strong> Your identity is hidden (stealth addresses). Settlement is private (ZK proofs).<br>
+                <strong>On-chain:</strong> No one can see who traded with who. Only you and your counterparty know.
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <!-- Left Panel: Request List -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📢 Quote Requests</div>
+                    <button class="btn-create" onclick="openCreateModal()">+ Create</button>
+                </div>
+                <div id="request-list" class="request-list"></div>
+            </div>
+
+            <!-- Right Panel: Request Detail & Quotes -->
+            <div class="card">
+                <div id="detail-empty" class="detail-empty">
+                    <div class="detail-empty-icon">👈</div>
+                    <p>Select a request to view details and quotes</p>
+                </div>
+
+                <div id="detail-panel" class="detail-panel" style="display: none;">
+                    <div id="detail-alert" class="alert"></div>
+                    <div id="request-detail"></div>
+                    <div id="quotes-section"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Request Modal -->
+    <div id="create-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Create Quote Request</div>
+                <button class="modal-close" onclick="closeCreateModal()">×</button>
+            </div>
+            <div id="create-alert" class="alert"></div>
+            <form onsubmit="createQuoteRequest(event)">
+                <div class="form-group">
+                    <label class="form-label">Trading Pair</label>
+                    <select id="assetPair" class="form-select" required>
+                        <option value="SOL/USDC">SOL/USDC</option>
+                        <option value="ETH/USDT">ETH/USDT</option>
+                        <option value="SOL/USDT">SOL/USDT</option>
+                        <option value="BTC/USDC">BTC/USDC</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Direction</label>
+                    <select id="direction" class="form-select" required>
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount</label>
+                    <input type="number" id="amount" class="form-input" placeholder="5.0" step="0.001" min="0.0003" required>
+                    <div class="form-hint">Amount will be visible on public board for fair trading</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Valid For (hours)</label>
+                    <input type="number" id="timeout" class="form-input" value="1" min="0.1" max="24" step="0.1" required>
+                </div>
+                <button type="submit" class="btn">📢 Post to Public Board</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Submit Quote Modal -->
+    <div id="quote-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Submit Quote</div>
+                <button class="modal-close" onclick="closeQuoteModal()">×</button>
+            </div>
+            <div id="quote-alert" class="alert"></div>
+            <div id="quote-request-info" style="margin-bottom: 20px;"></div>
+            <form onsubmit="submitQuote(event)">
+                <div class="form-group">
+                    <label class="form-label">Your Price Per Unit</label>
+                    <input type="number" id="price" class="form-input" placeholder="150.00" step="0.01" min="0.01" required oninput="updateQuotePreview()">
+                    <div class="form-hint">Quote your price per unit (e.g., 150 USDC per SOL)</div>
+                    <div id="quote-preview" style="margin-top: 10px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; display: none;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quote Valid For (hours)</label>
+                    <input type="number" id="quoteExpiration" class="form-input" value="0.5" min="0.1" max="24" step="0.1" required>
+                </div>
+                <button type="submit" class="btn">💼 Submit Quote</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mode Indicator -->
+    <div id="mode-indicator" class="mode-indicator">⚠️ SIMULATION MODE</div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000';
+        const USE_SIMULATION = true;
+        
+        let allRequests = [];
+        let selectedRequestId = null;
+        let selectedRequestData = null;
+
+        // LocalStorage Simulation
+        const Storage = {
+            getRequests: () => JSON.parse(localStorage.getItem('rfq_requests') || '[]'),
+            saveRequests: (requests) => localStorage.setItem('rfq_requests', JSON.stringify(requests)),
+            getQuotes: () => JSON.parse(localStorage.getItem('rfq_quotes') || '[]'),
+            saveQuotes: (quotes) => localStorage.setItem('rfq_quotes', JSON.stringify(quotes)),
+            addRequest: (request) => {
+                const requests = Storage.getRequests();
+                requests.push(request);
+                Storage.saveRequests(requests);
+            },
+            addQuote: (quote) => {
+                const quotes = Storage.getQuotes();
+                quotes.push(quote);
+                Storage.saveQuotes(quotes);
+            }
+        };
+
+        // Initialize sample data
+        function initializeSampleData() {
+            if (Storage.getRequests().length === 0) {
+                const sampleRequests = [
+                    {
+                        id: crypto.randomUUID(),
+                        asset_pair: 'SOL/USDC',
+                        direction: 'buy',
+                        amount_commitment: '5000000000',
+                        stealth_address: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        taker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now() - 3600000,
+                        expires_at: Date.now() + 3600000,
+                        status: 'active'
+                    },
+                    {
+                        id: crypto.randomUUID(),
+                        asset_pair: 'ETH/USDT',
+                        direction: 'sell',
+                        amount_commitment: '2500000000',
+                        stealth_address: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        taker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now() - 1800000,
+                        expires_at: Date.now() + 5400000,
+                        status: 'active'
+                    }
+                ];
+                Storage.saveRequests(sampleRequests);
+                
+                const firstRequestId = sampleRequests[0].id;
+                const sampleQuotes = [
+                    {
+                        id: crypto.randomUUID(),
+                        quote_request_id: firstRequestId,
+                        price_commitment: '150000000000',
+                        market_maker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now() - 1800000,
+                        expires_at: Date.now() + 3600000,
+                        status: 'active'
+                    },
+                    {
+                        id: crypto.randomUUID(),
+                        quote_request_id: firstRequestId,
+                        price_commitment: '148000000000',
+                        market_maker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now() - 1200000,
+                        expires_at: Date.now() + 3600000,
+                        status: 'active'
+                    },
+                    {
+                        id: crypto.randomUUID(),
+                        quote_request_id: firstRequestId,
+                        price_commitment: '152000000000',
+                        market_maker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now() - 600000,
+                        expires_at: Date.now() + 3600000,
+                        status: 'active'
+                    }
+                ];
+                sampleQuotes.forEach(quote => Storage.addQuote(quote));
+            }
+        }
+
+        // Formatting helpers
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            return date.toLocaleDateString();
+        }
+
+        function formatTimeLeft(expiresAt) {
+            const now = Date.now();
+            const diff = expiresAt - now;
+            
+            if (diff <= 0) return 'Expired';
+            
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m`;
+        }
+
+        function formatAddress(address) {
+            if (!address) return '';
+            return address.substring(0, 8) + '...' + address.substring(address.length - 6);
+        }
+
+        function showAlert(elementId, type, message) {
+            const alert = document.getElementById(elementId);
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        // Load requests
+        async function loadRequests() {
+            try {
+                let quoteRequests;
+                
+                if (USE_SIMULATION) {
+                    const requests = Storage.getRequests();
+                    const quotes = Storage.getQuotes();
+                    
+                    quoteRequests = requests
+                        .filter(req => req.status === 'active')
+                        .map(req => ({
+                            id: req.id,
+                            assetPair: req.asset_pair,
+                            direction: req.direction,
+                            amount: (parseFloat(req.amount_commitment) / 1e9).toFixed(4),
+                            createdAt: req.created_at,
+                            expiresAt: req.expires_at,
+                            status: req.status,
+                            quoteCount: quotes.filter(q => q.quote_request_id === req.id).length
+                        }));
+                } else {
+                    const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote-requests`);
+                    const data = await response.json();
+                    
+                    if (!response.ok) throw new Error(data.error || 'Failed to load');
+                    
+                    quoteRequests = data.data.quoteRequests.map(req => ({
+                        id: req.id,
+                        assetPair: req.asset_pair,
+                        direction: req.direction,
+                        amount: (parseFloat(req.amount_commitment) / 1e9).toFixed(4),
+                        createdAt: req.created_at,
+                        expiresAt: req.expires_at,
+                        status: req.status,
+                        quoteCount: 0
+                    }));
+                }
+                
+                allRequests = quoteRequests;
+                renderRequestList();
+                updateStats();
+                
+            } catch (error) {
+                document.getElementById('request-list').innerHTML = `
+                    <div class="empty-state">
+                        <p>Failed to load requests</p>
+                        <small>${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Render request list
+        function renderRequestList() {
+            const list = document.getElementById('request-list');
+            
+            if (allRequests.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>No active requests</p>
+                        <small>Create the first request!</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = allRequests.map(req => `
+                <div class="request-item ${selectedRequestId === req.id ? 'selected' : ''}" onclick="selectRequest('${req.id}')">
+                    <div class="request-header">
+                        <div class="request-pair">${req.assetPair}</div>
+                        <div class="direction-badge direction-${req.direction}">${req.direction}</div>
+                    </div>
+                    <div class="request-amount">📊 ${req.amount} ${req.assetPair.split('/')[0]}</div>
+                    <div class="request-meta">
+                        <span>⏱️ ${formatTimeLeft(req.expiresAt)}</span>
+                        <span class="quote-badge">${req.quoteCount} quotes</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('total-requests').textContent = allRequests.length;
+            document.getElementById('total-quotes').textContent = allRequests.reduce((sum, r) => sum + r.quoteCount, 0);
+        }
+
+        // Select request
+        async function selectRequest(requestId) {
+            selectedRequestId = requestId;
+            selectedRequestData = allRequests.find(r => r.id === requestId);
+            
+            if (!selectedRequestData) return;
+            
+            document.getElementById('detail-empty').style.display = 'none';
+            document.getElementById('detail-panel').style.display = 'flex';
+            
+            renderRequestList();
+            renderRequestDetail();
+            await loadQuotes(requestId);
+        }
+
+        // Render request detail
+        function renderRequestDetail() {
+            const req = selectedRequestData;
+            const [baseAsset, quoteAsset] = req.assetPair.split('/');
+            
+            document.getElementById('request-detail').innerHTML = `
+                <div class="request-detail">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="font-size: 1.5em;">${req.assetPair}</h3>
+                        <div class="direction-badge direction-${req.direction}">${req.direction}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <div class="detail-label">Amount</div>
+                            <div class="detail-value" style="color: #667eea;">${req.amount} ${baseAsset}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">${req.status}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Posted</div>
+                            <div class="detail-value">${formatDate(req.createdAt)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Expires</div>
+                            <div class="detail-value">${formatTimeLeft(req.expiresAt)}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <button class="btn" onclick="openQuoteModal()">💼 Submit Quote (Market Maker)</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load quotes
+        async function loadQuotes(requestId) {
+            try {
+                let quotes;
+                const request = selectedRequestData;
+                const requestAmount = parseFloat(request.amount);
+                const [baseAsset, quoteAsset] = request.assetPair.split('/');
+                
+                if (USE_SIMULATION) {
+                    quotes = Storage.getQuotes()
+                        .filter(q => q.quote_request_id === requestId)
+                        .map(q => ({
+                            quoteId: q.id,
+                            priceCommitment: q.price_commitment,
+                            marketMakerPublicKey: q.market_maker_public_key,
+                            expiresAt: q.expires_at,
+                            status: q.status
+                        }));
+                } else {
+                    const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote-request/${requestId}/quotes`);
+                    const data = await response.json();
+                    quotes = response.ok ? data.data.quotes : [];
+                }
+                
+                if (quotes.length === 0) {
+                    document.getElementById('quotes-section').innerHTML = `
+                        <div class="quotes-section">
+                            <div class="section-title">📊 Submitted Quotes</div>
+                            <div class="empty-state">
+                                <p>No quotes yet</p>
+                                <small>Market makers haven't submitted quotes</small>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort quotes
+                const sortedQuotes = quotes.sort((a, b) => {
+                    const priceA = parseFloat(a.priceCommitment) / 1e9;
+                    const priceB = parseFloat(b.priceCommitment) / 1e9;
+                    return request.direction === 'buy' ? priceA - priceB : priceB - priceA;
+                });
+                
+                const bestQuote = sortedQuotes[0];
+                
+                document.getElementById('quotes-section').innerHTML = `
+                    <div class="quotes-section">
+                        <div class="section-title">📊 Submitted Quotes (${quotes.length})</div>
+                        ${sortedQuotes.map((quote, index) => {
+                            const pricePerUnit = (parseFloat(quote.priceCommitment) / 1e9).toFixed(2);
+                            const totalCost = (requestAmount * pricePerUnit).toFixed(2);
+                            const isBest = quote.quoteId === bestQuote.quoteId;
+                            
+                            return `
+                                <div class="quote-item ${isBest ? 'best' : ''}">
+                                    ${isBest ? '<div class="best-badge">⭐ BEST PRICE</div>' : ''}
+                                    <div class="quote-header">
+                                        <div class="quote-number">Quote #${index + 1}</div>
+                                        <div style="font-size: 0.85em; color: rgba(255,255,255,0.6);">${formatTimeLeft(quote.expiresAt)}</div>
+                                    </div>
+                                    <div class="quote-grid">
+                                        <div class="detail-item">
+                                            <div class="detail-label">Price Per Unit</div>
+                                            <div class="detail-value" style="color: #667eea;">${pricePerUnit} ${quoteAsset}</div>
+                                        </div>
+                                        <div class="detail-item">
+                                            <div class="detail-label">Total Cost</div>
+                                            <div class="detail-value" style="color: #667eea; font-weight: 700;">${totalCost} ${quoteAsset}</div>
+                                        </div>
+                                    </div>
+                                    <div class="quote-preview">
+                                        💡 You will ${request.direction}: <strong>${requestAmount} ${baseAsset}</strong> for <strong>${totalCost} ${quoteAsset}</strong>
+                                    </div>
+                                    ${quote.status === 'active' ? `<button class="btn" onclick="acceptQuote('${quote.quoteId}')">✅ Accept Quote</button>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                
+            } catch (error) {
+                document.getElementById('quotes-section').innerHTML = `
+                    <div class="empty-state">
+                        <p>Failed to load quotes</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Accept quote
+        async function acceptQuote(quoteId) {
+            if (!confirm('Accept this quote and execute the trade?')) return;
+            
+            const mockSignature = '0x' + '00'.repeat(2144);
+            const mockPublicKey = '0x' + '00'.repeat(2208);
+            const mockCommitment = '0x' + '00'.repeat(32);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote/${quoteId}/accept`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        signature: mockSignature,
+                        publicKey: mockPublicKey,
+                        commitment: mockCommitment
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('detail-alert', 'success', `✅ Quote accepted! TX: ${formatAddress(data.data.txHash || 'pending')}`);
+                    await loadQuotes(selectedRequestId);
+                } else {
+                    showAlert('detail-alert', 'error', `❌ ${data.error || 'Failed to accept quote'}`);
+                }
+            } catch (error) {
+                showAlert('detail-alert', 'error', `❌ Error: ${error.message}`);
+            }
+        }
+
+        // Modal functions
+        function openCreateModal() {
+            document.getElementById('create-modal').classList.add('show');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-modal').classList.remove('show');
+        }
+
+        function openQuoteModal() {
+            if (!selectedRequestData) return;
+            
+            const req = selectedRequestData;
+            const [baseAsset, quoteAsset] = req.assetPair.split('/');
+            
+            document.getElementById('quote-request-info').innerHTML = `
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <strong>${req.assetPair}</strong>
+                        <div class="direction-badge direction-${req.direction}">${req.direction}</div>
+                    </div>
+                    <div style="font-size: 0.9em; color: rgba(255,255,255,0.7);">
+                        <div>Amount: <strong>${req.amount} ${baseAsset}</strong></div>
+                        <div style="margin-top: 5px;">Expires: ${formatTimeLeft(req.expiresAt)}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('price').value = '';
+            document.getElementById('quote-preview').style.display = 'none';
+            document.getElementById('quote-modal').classList.add('show');
+        }
+
+        function closeQuoteModal() {
+            document.getElementById('quote-modal').classList.remove('show');
+        }
+
+        function updateQuotePreview() {
+            const priceInput = parseFloat(document.getElementById('price').value);
+            const req = selectedRequestData;
+            
+            if (!priceInput || priceInput <= 0 || !req) {
+                document.getElementById('quote-preview').style.display = 'none';
+                return;
+            }
+            
+            const requestAmount = parseFloat(req.amount);
+            const [baseAsset, quoteAsset] = req.assetPair.split('/');
+            const totalCost = (requestAmount * priceInput).toFixed(2);
+            
+            document.getElementById('quote-preview').style.display = 'block';
+            document.getElementById('quote-preview').innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 5px;">💰 Quote Preview:</div>
+                <div>Price per ${baseAsset}: <strong>${priceInput.toFixed(2)} ${quoteAsset}</strong></div>
+                <div style="margin-top: 5px;">Taker will ${req.direction}: <strong>${requestAmount} ${baseAsset}</strong></div>
+                <div style="margin-top: 5px; font-size: 1.05em; color: #667eea; font-weight: 700;">
+                    ${req.direction === 'buy' ? 'You provide' : 'You receive'}: ${requestAmount} ${baseAsset}<br>
+                    ${req.direction === 'buy' ? 'You receive' : 'You provide'}: ${totalCost} ${quoteAsset}
+                </div>
+            `;
+        }
+
+        // Create request
+        async function createQuoteRequest(event) {
+            event.preventDefault();
+            
+            const assetPair = document.getElementById('assetPair').value;
+            const direction = document.getElementById('direction').value;
+            const amountInput = parseFloat(document.getElementById('amount').value);
+            const timeoutHours = parseFloat(document.getElementById('timeout').value);
+            
+            const amount = Math.floor(amountInput * 1e9).toString();
+            const timeout = Date.now() + (timeoutHours * 60 * 60 * 1000);
+            
+            try {
+                if (USE_SIMULATION) {
+                    const newRequest = {
+                        id: crypto.randomUUID(),
+                        asset_pair: assetPair,
+                        direction: direction,
+                        amount_commitment: amount,
+                        stealth_address: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        taker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now(),
+                        expires_at: timeout,
+                        status: 'active'
+                    };
+                    
+                    Storage.addRequest(newRequest);
+                    
+                    showAlert('create-alert', 'success', `✅ Quote request posted!`);
+                    event.target.reset();
+                    setTimeout(() => {
+                        closeCreateModal();
+                        loadRequests();
+                    }, 1500);
+                } else {
+                    const mockSignature = '0x' + '00'.repeat(2144);
+                    const mockPublicKey = '0x' + '00'.repeat(2208);
+                    
+                    const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote-request`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            assetPair,
+                            direction,
+                            amount,
+                            timeout,
+                            signature: mockSignature,
+                            publicKey: mockPublicKey,
+                            chainId: 'solana-devnet'
+                        })
+                    });
+                    
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showAlert('create-alert', 'success', `✅ Quote request posted!`);
+                        event.target.reset();
+                        setTimeout(() => {
+                            closeCreateModal();
+                            loadRequests();
+                        }, 1500);
+                    } else {
+                        showAlert('create-alert', 'error', `❌ ${data.error || 'Failed to create'}`);
+                    }
+                }
+            } catch (error) {
+                showAlert('create-alert', 'error', `❌ Error: ${error.message}`);
+            }
+        }
+
+        // Submit quote
+        async function submitQuote(event) {
+            event.preventDefault();
+            
+            const priceInput = parseFloat(document.getElementById('price').value);
+            const expirationHours = parseFloat(document.getElementById('quoteExpiration').value);
+            
+            const price = Math.floor(priceInput * 1e9).toString();
+            const expirationTime = Date.now() + (expirationHours * 60 * 60 * 1000);
+            
+            try {
+                if (USE_SIMULATION) {
+                    const newQuote = {
+                        id: crypto.randomUUID(),
+                        quote_request_id: selectedRequestId,
+                        price_commitment: price,
+                        market_maker_public_key: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
+                        created_at: Date.now(),
+                        expires_at: expirationTime,
+                        status: 'active'
+                    };
+                    
+                    Storage.addQuote(newQuote);
+                    
+                    showAlert('quote-alert', 'success', `✅ Quote submitted!`);
+                    document.getElementById('price').value = '';
+                    document.getElementById('quoteExpiration').value = '0.5';
+                    setTimeout(() => {
+                        closeQuoteModal();
+                        loadRequests();
+                        selectRequest(selectedRequestId);
+                    }, 1500);
+                } else {
+                    const mockSignature = '0x' + '00'.repeat(2144);
+                    const mockPublicKey = '0x' + '00'.repeat(2208);
+                    
+                    const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            quoteRequestId: selectedRequestId,
+                            price,
+                            expirationTime,
+                            signature: mockSignature,
+                            publicKey: mockPublicKey
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showAlert('quote-alert', 'success', `✅ Quote submitted!`);
+                        document.getElementById('price').value = '';
+                        document.getElementById('quoteExpiration').value = '0.5';
+                        setTimeout(() => {
+                            closeQuoteModal();
+                            loadRequests();
+                            selectRequest(selectedRequestId);
+                        }, 1500);
+                    } else {
+                        showAlert('quote-alert', 'error', `❌ ${data.error || 'Failed to submit'}`);
+                    }
+                }
+            } catch (error) {
+                showAlert('quote-alert', 'error', `❌ Error: ${error.message}`);
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            const modeIndicator = document.getElementById('mode-indicator');
+            if (USE_SIMULATION) {
+                modeIndicator.textContent = '⚠️ SIMULATION MODE';
+                modeIndicator.classList.remove('real');
+                initializeSampleData();
+            } else {
+                modeIndicator.textContent = '✅ REAL MODE (Devnet)';
+                modeIndicator.classList.add('real');
+            }
+            
+            loadRequests();
+            setInterval(loadRequests, 10000);
+        });
+    </script>
+</body>
+</html>

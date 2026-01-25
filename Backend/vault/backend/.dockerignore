@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs (we build fresh in Docker)
+dist/
+**/dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Tests
+coverage/
+**/*.test.ts
+**/tests/
+
+# Contracts (not needed for backend)
+contracts/
+
+# Examples
+examples/
+
+# Documentation
+*.md
+!README.md
+
+# Environment files
+.env
+.env.*
+
+# Foundry/Solana artifacts
+contracts/evm/cache/
+contracts/evm/out/
+contracts/solana/target/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

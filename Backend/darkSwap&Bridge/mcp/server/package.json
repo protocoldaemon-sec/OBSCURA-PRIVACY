@@ -1,0 +1,39 @@
+{
+  "name": "@obscuraswap/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Obscura Swap - Privacy-focused cross-chain swap platform",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "obscuraswap-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "obscura-swap",
+    "silentswap",
+    "cross-chain",
+    "bridge",
+    "swap"
+  ],
+  "author": "Obscura Swap Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,21 @@
+[package]
+name = "sip-vault"
+version = "0.1.0"
+description = "SIP Vault - Asset custody with commitment-based access control for Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "sip_vault"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.0"
+anchor-spl = "0.30.0"
+solana-security-txt = "1.1.1"

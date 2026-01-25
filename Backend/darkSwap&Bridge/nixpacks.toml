@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs_18", "pnpm-9_x"]
+
+[phases.install]
+cmds = ["cd backend && pnpm install --no-frozen-lockfile"]
+
+[start]
+cmd = "cd backend && pnpm start"

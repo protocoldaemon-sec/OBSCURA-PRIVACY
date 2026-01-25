@@ -1,0 +1,17 @@
+{
+  "name": "@obscura/examples",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "tsx integration-demo.ts",
+    "demo:watch": "tsx watch integration-demo.ts"
+  },
+  "dependencies": {
+    "@obscura/crypto": "workspace:*",
+    "@obscura/backend": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

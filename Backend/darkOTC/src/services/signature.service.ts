@@ -164,13 +164,12 @@ export class SignatureService {
     address: Uint8Array
   ): Promise<boolean> {
     try {
-      // Dynamic import for ESM module - use direct path to index.es.js
-      // @ts-ignore - ESM module without proper type definitions
-      const wotsModule = await import('mochimo-wots-v2/dist/index.es');
-      const WOTS = wotsModule.WOTS as any;
+      // Use vendored WOTS code (exact copy from mochimo-wots-v2@1.1.1)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { WOTS } = require('../utils/wots-vendor.js');
       
-      if (!WOTS) {
-        throw new Error('WOTS not found in mochimo-wots-v2 module');
+      if (!WOTS || typeof WOTS.wots_pk_from_sig !== 'function') {
+        throw new Error('WOTS.wots_pk_from_sig not found in vendored code');
       }
       
       // Extract components from address
