@@ -5,7 +5,6 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { fetchHealth, fetchInfo, fetchBatches } from '@/lib/api'
 import { TOKEN_LOGOS, CHAIN_LOGOS } from '@/lib/logos'
@@ -57,6 +56,8 @@ export default function DashboardLayout() {
   const [walletSelectorOpen, setWalletSelectorOpen] = useState(false)
   const [preferredWallet, setPreferredWallet] = useState<WalletType>(null)
   const [showConnectModal, setShowConnectModal] = useState(false)
+  const [networkError, setNetworkError] = useState<string | null>(null)
+  const [showNetworkError, setShowNetworkError] = useState(false)
 
   // Determine active wallet - use preferred if set, otherwise check what's connected
   const activeWallet: WalletType = preferredWallet 
@@ -81,6 +82,72 @@ export default function DashboardLayout() {
       setPreferredWallet(null)
     }
   }, [solanaConnected, evmConnected])
+
+  // Network validation - Check if user is on correct network
+  useEffect(() => {
+    const validateNetwork = async () => {
+      // Validate Solana network (must be Devnet)
+      if (solanaConnected && publicKey) {
+        try {
+          const connection = new Connection('https://api.devnet.solana.com', 'confirmed')
+          // Try to get account info to verify we're on devnet
+          const accountInfo = await connection.getAccountInfo(publicKey)
+          
+          // Additional check: try mainnet connection to see if account exists there
+          const mainnetConnection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed')
+          const mainnetInfo = await mainnetConnection.getAccountInfo(publicKey)
+          
+          // If account has more activity on mainnet, likely user is on mainnet
+          if (mainnetInfo && accountInfo && mainnetInfo.lamports > accountInfo.lamports * 10) {
+            setNetworkError('⚠️ Please switch to Solana Devnet. This app only works on Devnet.')
+            setShowNetworkError(true)
+            solanaDisconnect()
+            return
+          }
+          
+          setNetworkError(null)
+          setShowNetworkError(false)
+        } catch (error) {
+          console.error('Network validation error:', error)
+        }
+      }
+      
+      // Validate EVM network (must be Sepolia testnet - chainId 11155111)
+      if (evmConnected && evmAddress) {
+        try {
+          if (typeof window !== 'undefined' && window.ethereum) {
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+            const chainIdDecimal = parseInt(chainId, 16)
+            
+            // Sepolia chainId = 11155111
+            if (chainIdDecimal !== 11155111) {
+              const networkNames: Record<number, string> = {
+                1: 'Ethereum Mainnet',
+                5: 'Goerli Testnet',
+                11155111: 'Sepolia Testnet',
+                137: 'Polygon Mainnet',
+                80001: 'Polygon Mumbai'
+              }
+              
+              const currentNetworkName = networkNames[chainIdDecimal] || `Chain ID ${chainIdDecimal}`
+              
+              setNetworkError(`⚠️ Wrong Network! Please switch to Sepolia Testnet. You're currently on ${currentNetworkName}.`)
+              setShowNetworkError(true)
+              evmDisconnect()
+              return
+            }
+            
+            setNetworkError(null)
+            setShowNetworkError(false)
+          }
+        } catch (error) {
+          console.error('EVM network validation error:', error)
+        }
+      }
+    }
+    
+    validateNetwork()
+  }, [solanaConnected, evmConnected, publicKey, evmAddress])
 
   // Get current balance based on active wallet
   const currentBalance = activeWallet === 'solana' 
@@ -265,9 +332,9 @@ export default function DashboardLayout() {
       <header className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-b border-[#2a2a3a]">
         <div className="max-w-[1400px] mx-auto px-4 md:px-6">
           <div className="flex items-center justify-between py-4">
-            <Link href="/" className="flex items-center gap-2 md:gap-3">
+            <a href="https://obscura-app.com" className="flex items-center gap-2 md:gap-3">
               <img src="/logo-white.png" alt="Obscura" className="h-8 md:h-10 w-auto" />
-            </Link>
+            </a>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex gap-2">
@@ -406,10 +473,10 @@ export default function DashboardLayout() {
               })()}
               
               {/* Single Wallet Selector */}
-              <div className="relative">
+              <div className="relative z-[60]">
                 {activeWallet ? (
                   <button onClick={() => setWalletSelectorOpen(!walletSelectorOpen)}
-                    className="flex items-center gap-2 px-3 py-2 bg-[#1a1a24] rounded-lg border border-[#2a2a3a] hover:border-[#3a3a4a] transition-all">
+                    className="flex items-center gap-2 px-3 py-2 bg-[#1a1a24] rounded-lg border border-[#2a2a3a] hover:border-[#3a3a4a] transition-all touch-manipulation">
                     <img src={currentChainLogo} alt="" className="w-5 h-5 rounded-full" />
                     <span className="text-sm">{walletAddress}</span>
                     <svg className={`w-4 h-4 text-gray-400 transition-transform ${walletSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,8 +484,10 @@ export default function DashboardLayout() {
                     </svg>
                   </button>
                 ) : (
-                  <button onClick={() => setWalletSelectorOpen(!walletSelectorOpen)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#892CDC] to-[#52057B] rounded-lg text-sm font-medium hover:opacity-90 transition-all">
+                  <button 
+                    onClick={() => setWalletSelectorOpen(!walletSelectorOpen)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#892CDC] to-[#52057B] rounded-lg text-sm font-medium hover:opacity-90 transition-all touch-manipulation active:scale-95 min-h-[44px]"
+                  >
                     <span>Connect Wallet</span>
                     <svg className={`w-4 h-4 transition-transform ${walletSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -431,7 +500,7 @@ export default function DashboardLayout() {
                   {walletSelectorOpen && (
                     <>
                       <motion.div 
-                        className="fixed inset-0 z-40" 
+                        className="fixed inset-0 z-[70] bg-black/20" 
                         onClick={() => setWalletSelectorOpen(false)}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -439,7 +508,7 @@ export default function DashboardLayout() {
                         transition={{ duration: 0.2 }}
                       />
                       <motion.div 
-                        className="absolute right-0 top-full mt-2 w-64 bg-[#1a1a24] border border-[#2a2a3a] rounded-xl shadow-xl z-50 overflow-hidden"
+                        className="absolute right-0 top-full mt-2 w-64 bg-[#1a1a24] border border-[#2a2a3a] rounded-xl shadow-xl z-[80] overflow-hidden"
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -468,7 +537,7 @@ export default function DashboardLayout() {
                           </div>
                           {wallets.slice(0, 4).map((w) => (
                             <button key={w.adapter.name} onClick={() => handleConnectSolana(w.adapter.name)}
-                              className="w-full flex items-center gap-3 p-3 hover:bg-[#252530] transition-colors">
+                              className="w-full flex items-center gap-3 p-3 hover:bg-[#252530] transition-colors touch-manipulation active:bg-[#2a2a3a]">
                               <img src={w.adapter.icon} alt={w.adapter.name} className="w-6 h-6 rounded" />
                               <span className="text-sm font-medium">{w.adapter.name}</span>
                             </button>
@@ -476,7 +545,7 @@ export default function DashboardLayout() {
                           <div className="p-3 border-t border-[#2a2a3a]">
                             <p className="text-xs text-gray-500 uppercase mb-2">EVM Wallets</p>
                           </div>
-                          <button onClick={handleConnectEVM} className="w-full flex items-center gap-3 p-3 hover:bg-[#252530] transition-colors">
+                          <button onClick={handleConnectEVM} className="w-full flex items-center gap-3 p-3 hover:bg-[#252530] transition-colors touch-manipulation active:bg-[#2a2a3a]">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask" className="w-6 h-6" />
                             <span className="text-sm font-medium">MetaMask (Sepolia)</span>
                           </button>
@@ -566,6 +635,68 @@ export default function DashboardLayout() {
                   </div>
                 )}
 
+                {/* Vault Balance - Mobile */}
+                {activeWallet && (() => {
+                  const stored = typeof window !== 'undefined' ? localStorage.getItem('obscura_deposit_notes') : null
+                  const depositNotes = stored ? JSON.parse(stored) : []
+                  
+                  const TOKEN_DECIMALS: Record<string, number> = {
+                    'native': 9,
+                    'usdc': 6,
+                    'usdt': 6
+                  }
+                  
+                  const vaultBalances: Record<string, number> = {}
+                  depositNotes.forEach((note: any) => {
+                    const token = note.token || 'native'
+                    const decimals = TOKEN_DECIMALS[token] || 9
+                    const amount = Number(note.amount) / Math.pow(10, decimals)
+                    vaultBalances[token] = (vaultBalances[token] || 0) + amount
+                  })
+                  
+                  const hasDeposit = Object.keys(vaultBalances).length > 0
+                  
+                  return (
+                    <div className="px-4 pb-2">
+                      <div className={`p-3 rounded-lg border ${hasDeposit ? 'bg-green-500/10 border-green-500/30' : 'bg-gray-500/10 border-gray-500/30'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className={`w-4 h-4 ${hasDeposit ? 'text-green-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span className="text-xs font-medium text-white">Vault Balance</span>
+                          {hasDeposit && (
+                            <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded ml-auto">Ready</span>
+                          )}
+                        </div>
+                        {hasDeposit ? (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {vaultBalances['native'] && (
+                              <div className="flex items-center gap-1">
+                                <img src={TOKEN_LOGOS.SOL} alt="" className="w-3 h-3 rounded-full" />
+                                <span className="font-medium text-green-400">{vaultBalances['native'].toFixed(4)} SOL</span>
+                              </div>
+                            )}
+                            {vaultBalances['usdc'] && (
+                              <div className="flex items-center gap-1">
+                                <img src={TOKEN_LOGOS.USDC} alt="" className="w-3 h-3 rounded-full" />
+                                <span className="font-medium text-green-400">{vaultBalances['usdc'].toFixed(2)} USDC</span>
+                              </div>
+                            )}
+                            {vaultBalances['usdt'] && (
+                              <div className="flex items-center gap-1">
+                                <img src={TOKEN_LOGOS.USDT} alt="" className="w-3 h-3 rounded-full" />
+                                <span className="font-medium text-green-400">{vaultBalances['usdt'].toFixed(2)} USDT</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-gray-400">No Deposit</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div className="pt-4 mt-2 border-t border-[#2a2a3a] px-4">
                   {activeWallet ? (
                     <div className="flex items-center justify-between p-3 bg-[#1a1a24] rounded-lg border border-[#2a2a3a]">
@@ -576,8 +707,13 @@ export default function DashboardLayout() {
                       <button onClick={handleDisconnect} className="text-xs text-red-400 hover:text-red-300">Disconnect</button>
                     </div>
                   ) : (
-                    <button onClick={() => setWalletSelectorOpen(true)}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-[#892CDC] to-[#52057B] rounded-lg text-sm font-medium">
+                    <button 
+                      onClick={() => {
+                        setShowConnectModal(true)
+                        setMobileMenuOpen(false)
+                      }}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-[#892CDC] to-[#52057B] rounded-lg text-sm font-medium touch-manipulation active:scale-95 transition-transform"
+                    >
                       Connect Wallet
                     </button>
                   )}
@@ -716,6 +852,80 @@ export default function DashboardLayout() {
                   <p className="text-xs text-gray-400 text-center">
                     By connecting your wallet, you agree to our Terms of Service and Privacy Policy
                   </p>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* Network Error Modal */}
+      <AnimatePresence>
+        {showNetworkError && networkError && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]"
+              onClick={() => setShowNetworkError(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-[101]"
+            >
+              <div className="bg-[#1a1a24] border-2 border-red-500/50 rounded-2xl p-6 mx-4 shadow-2xl">
+                {/* Error Icon */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                <h3 className="text-xl font-bold text-white text-center mb-2">Wrong Network</h3>
+                <p className="text-gray-300 text-center mb-6">{networkError}</p>
+
+                {/* Instructions */}
+                <div className="bg-[#252530] rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-400 mb-3">Required Networks:</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <img src={CHAIN_LOGOS.solana} alt="Solana" className="w-5 h-5" />
+                      <span className="text-sm text-white">Solana Devnet</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img src={CHAIN_LOGOS.ethereum} alt="Ethereum" className="w-5 h-5" />
+                      <span className="text-sm text-white">Sepolia Testnet (Chain ID: 11155111)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowNetworkError(false)
+                      setNetworkError(null)
+                    }}
+                    className="flex-1 px-4 py-3 bg-[#252530] hover:bg-[#2a2a3a] text-white rounded-lg transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowNetworkError(false)
+                      setNetworkError(null)
+                      // Reopen connect modal to try again
+                      setShowConnectModal(true)
+                    }}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#892CDC] to-[#6B1FA8] hover:from-[#9D3EF0] hover:to-[#7C29BC] text-white rounded-lg transition-all font-medium"
+                  >
+                    Try Again
+                  </button>
                 </div>
               </div>
             </motion.div>

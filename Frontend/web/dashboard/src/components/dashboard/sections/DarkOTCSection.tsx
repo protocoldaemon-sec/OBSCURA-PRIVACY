@@ -47,11 +47,14 @@ interface QuoteRequest {
 }
 
 interface Quote {
-  quoteId: string
-  priceCommitment: string
-  marketMakerPublicKey: string
-  expiresAt: number
+  id: string  // Backend uses 'id' not 'quoteId'
+  price_commitment: string  // Backend uses snake_case
+  market_maker_public_key: string  // Backend uses snake_case
+  market_maker_commitment?: string  // Backend uses snake_case - REQUIRED for atomic swap! (optional for backward compatibility)
+  expires_at: number  // Backend uses snake_case
   status: string
+  quote_request_id: string  // Backend uses snake_case
+  created_at: number  // Backend uses snake_case
 }
 
 const TRADING_PAIRS = [
@@ -331,8 +334,23 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
     return () => clearInterval(interval)
   }, [publicKey, evmAddress])
 
+  // Poll quotes when a request is selected
+  useEffect(() => {
+    if (!selectedRequest) return
+    
+    // Load quotes immediately
+    loadQuotes(selectedRequest.id)
+    
+    // Poll every 5 seconds for real-time updates
+    const interval = setInterval(() => {
+      loadQuotes(selectedRequest.id)
+    }, 5000)
+    
+    return () => clearInterval(interval)
+  }, [selectedRequest?.id])
+
   const loadVaultBalance = async () => {
-    // Load all deposit notes and calculate total per token
+    // Load deposit notes from localStorage to get commitments
     try {
       const stored = localStorage.getItem('obscura_deposit_notes')
       const depositNotes = stored ? JSON.parse(stored) : []
@@ -348,7 +366,10 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
         return
       }
       
-      // Calculate total balance per token
+      console.log('[DarkOTC] Loading vault balance from Arcium cSPL...')
+      console.log('[DarkOTC] Found', depositNotes.length, 'deposit notes')
+      
+      // Query vault balance from Obscura-LLMS API (Arcium cSPL off-chain balance)
       const TOKEN_DECIMALS: Record<string, number> = {
         'native': 9, // SOL
         'usdc': 6,
@@ -356,32 +377,75 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
       }
       
       const balances: Record<string, number> = {}
-      depositNotes.forEach((note: any) => {
-        const token = note.token || 'native'
-        const decimals = TOKEN_DECIMALS[token] || 9
-        const amount = Number(note.amount) / Math.pow(10, decimals)
-        balances[token] = (balances[token] || 0) + amount
-      })
-      
-      // For Dark OTC, we'll use the first available token balance
-      // Priority: native > usdc > usdt
+      let selectedCommitment: string | null = null
       let selectedToken = 'native'
       let selectedAmount = '0'
-      let selectedCommitment = null
       
-      if (balances['native'] && balances['native'] > 0) {
-        selectedToken = 'native'
-        selectedAmount = balances['native'].toString()
-        selectedCommitment = depositNotes.find((n: any) => (n.token || 'native') === 'native')?.commitment
-      } else if (balances['usdc'] && balances['usdc'] > 0) {
-        selectedToken = 'usdc'
-        selectedAmount = balances['usdc'].toString()
-        selectedCommitment = depositNotes.find((n: any) => n.token === 'usdc')?.commitment
-      } else if (balances['usdt'] && balances['usdt'] > 0) {
-        selectedToken = 'usdt'
-        selectedAmount = balances['usdt'].toString()
-        selectedCommitment = depositNotes.find((n: any) => n.token === 'usdt')?.commitment
+      // Query balance for each deposit note
+      for (const note of depositNotes) {
+        try {
+          const token = note.token || 'native'
+          const commitment = note.commitment
+          
+          console.log(`[DarkOTC] Querying balance for ${token} commitment: ${commitment.slice(0, 16)}...`)
+          
+          // Query Obscura-LLMS API for vault balance
+          const response = await fetch(`${API_BASE_URL}/api/v1/balance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              commitment: commitment,
+              chainId: 'solana-devnet'
+            })
+          })
+          
+          const result = await response.json()
+          
+          if (result.success && result.balance) {
+            const decimals = TOKEN_DECIMALS[token] || 9
+            const balanceNum = Number(result.balance) / Math.pow(10, decimals)
+            
+            console.log(`[DarkOTC] ✅ Vault balance for ${token}: ${balanceNum}`)
+            console.log(`[DarkOTC] Confidential account: ${result.confidentialAccount?.slice(0, 16)}...`)
+            
+            balances[token] = (balances[token] || 0) + balanceNum
+            
+            // Select first available balance as primary
+            if (!selectedCommitment && balanceNum > 0) {
+              selectedCommitment = commitment
+              selectedToken = token
+              selectedAmount = balanceNum.toString()
+            }
+          } else {
+            console.warn(`[DarkOTC] ⚠️ Failed to query balance for ${token}:`, result.error)
+            // Fallback to localStorage amount if API fails
+            const decimals = TOKEN_DECIMALS[token] || 9
+            const amount = Number(note.amount) / Math.pow(10, decimals)
+            balances[token] = (balances[token] || 0) + amount
+            
+            if (!selectedCommitment && amount > 0) {
+              selectedCommitment = commitment
+              selectedToken = token
+              selectedAmount = amount.toString()
+            }
+          }
+        } catch (error) {
+          console.error(`[DarkOTC] Error querying balance for note:`, error)
+          // Fallback to localStorage amount
+          const token = note.token || 'native'
+          const decimals = TOKEN_DECIMALS[token] || 9
+          const amount = Number(note.amount) / Math.pow(10, decimals)
+          balances[token] = (balances[token] || 0) + amount
+          
+          if (!selectedCommitment && amount > 0) {
+            selectedCommitment = note.commitment
+            selectedToken = token
+            selectedAmount = amount.toString()
+          }
+        }
       }
+      
+      console.log('[DarkOTC] Final vault balances:', balances)
       
       setVaultBalance({
         commitment: selectedCommitment,
@@ -431,20 +495,62 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
 
   const loadQuotes = async (requestId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote-request/${requestId}/quotes`)
+      console.log('[DarkOTC] Loading quotes for request:', requestId)
+      const url = `${API_BASE_URL}/api/v1/rfq/quote-request/${requestId}/quotes`
+      console.log('[DarkOTC] Fetching from:', url)
+      
+      const response = await fetch(url)
+      console.log('[DarkOTC] Response status:', response.status)
+      
       const data = await response.json()
+      console.log('[DarkOTC] Response data:', data)
+      
       if (data.success) {
-        const activeQuotes = (data.data.quotes || []).filter((quote: Quote) => {
-          return quote.expiresAt > Date.now() && quote.status === 'active'
+        const allQuotes = data.data.quotes || []
+        console.log('[DarkOTC] All quotes from backend:', allQuotes.length, allQuotes)
+        
+        const activeQuotes = allQuotes.filter((quote: Quote) => {
+          try {
+            // Validate timestamp - backend uses expires_at (snake_case)
+            const expiresAt = Number(quote.expires_at)
+            if (isNaN(expiresAt) || expiresAt <= 0) {
+              console.warn('[DarkOTC] Invalid expires_at timestamp:', quote.expires_at, 'for quote:', quote.id)
+              return false
+            }
+            
+            const isExpired = expiresAt <= Date.now()
+            const isActive = !isExpired && quote.status === 'active'
+            
+            console.log('[DarkOTC] Quote filter:', {
+              quoteId: quote.id,
+              status: quote.status,
+              expiresAt: expiresAt,
+              expiresAtDate: isNaN(expiresAt) ? 'Invalid' : new Date(expiresAt).toISOString(),
+              now: Date.now(),
+              nowDate: new Date().toISOString(),
+              isExpired,
+              isActive
+            })
+            
+            return isActive
+          } catch (error) {
+            console.error('[DarkOTC] Error filtering quote:', quote.id, error)
+            return false
+          }
         })
+        
+        console.log('[DarkOTC] Active quotes after filter:', activeQuotes.length, activeQuotes)
         setQuotes(activeQuotes)
+      } else {
+        console.error('[DarkOTC] Backend returned error:', data.error)
       }
     } catch (error) {
-      console.error('Failed to load quotes:', error)
+      console.error('[DarkOTC] Failed to load quotes:', error)
     }
   }
 
   const selectRequest = (request: QuoteRequest) => {
+    console.log('[DarkOTC] Selecting request:', request.id, request)
     setSelectedRequest(request)
     loadQuotes(request.id)
   }
@@ -471,6 +577,15 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
     }, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Debug: Log quotes state changes
+  useEffect(() => {
+    console.log('[DarkOTC] Quotes state updated:', {
+      count: quotes.length,
+      quotes: quotes,
+      selectedRequest: selectedRequest?.id
+    })
+  }, [quotes, selectedRequest])
 
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -708,6 +823,18 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
       ))
 
       // Step 3: Submit to API
+      console.log('[DarkOTC] Submitting quote...')
+      console.log('[DarkOTC] Request ID:', selectedRequest.id)
+      console.log('[DarkOTC] Wallet address:', publicKey?.toBase58() || evmAddress)
+      console.log('[DarkOTC] Payload:', {
+        quoteRequestId: selectedRequest.id,
+        price: priceInBaseUnits,
+        expirationTime: expirationTime,
+        walletAddress: publicKey?.toBase58() || evmAddress,
+        commitment: vaultBalance.commitment,
+        chainId: 'solana-devnet'
+      })
+      
       const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -718,12 +845,15 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
           signature: signature, // WOTS+ signature (4288 hex chars)
           publicKey: wotsPublicKey, // WOTS+ public key (4416 hex chars)
           message: message, // Include signed message for verification
+          walletAddress: publicKey?.toBase58() || evmAddress, // ← REQUIRED for settlement!
           commitment: vaultBalance.commitment, // From Obscura deposit (REQUIRED!)
           chainId: 'solana-devnet'
         })
       })
 
+      console.log('[DarkOTC] Response status:', response.status)
       const result = await response.json()
+      console.log('[DarkOTC] Response data:', result)
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to submit quote')
@@ -800,6 +930,16 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
       return
     }
 
+    // Check if market maker has provided commitment (required for atomic swap)
+    if (!quote.market_maker_commitment) {
+      showModal('Error', {
+        error: 'Market maker commitment missing',
+        details: 'This quote does not have a market maker commitment. The market maker must deposit to the vault before their quote can be accepted. Please try another quote or wait for the market maker to update their quote.',
+        action: 'Select Another Quote'
+      }, false)
+      return
+    }
+
     setShowLoadingModal(true)
     setLoadingSteps([
       { label: 'Creating commitment', status: 'loading', description: 'Preparing settlement...' },
@@ -818,7 +958,7 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
       ))
 
       // Step 2: Sign with WOTS+ (post-quantum signature)
-      const message = `accept_quote:${quote.quoteId}`
+      const message = `accept_quote:${quote.id}`
       
       // Generate unique WOTS+ signature (one-time use only!)
       const tag = `accept-quote-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -830,23 +970,51 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
       ))
 
       // Step 3: Submit to API
-      const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote/${quote.quoteId}/accept`, {
+      console.log('[DarkOTC] Accepting quote...')
+      console.log('[DarkOTC] Quote ID:', quote.id)
+      console.log('[DarkOTC] Request ID:', selectedRequest.id)
+      console.log('[DarkOTC] Vault commitment:', vaultBalance.commitment)
+      console.log('[DarkOTC] Market maker commitment:', quote.market_maker_commitment)
+      console.log('[DarkOTC] Payload:', {
+        signature: signature.substring(0, 50) + '...',
+        publicKey: wotsPublicKey.substring(0, 50) + '...',
+        message: message,
+        takerCommitment: vaultBalance.commitment,
+        takerAddress: publicKey?.toBase58() || evmAddress,
+        marketMakerCommitment: quote.market_maker_commitment,
+        chainId: 'solana-devnet'
+      })
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/rfq/quote/${quote.id}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           signature: signature, // WOTS+ signature (4288 hex chars)
           publicKey: wotsPublicKey, // WOTS+ public key (4416 hex chars)
           message: message, // Include signed message for verification
-          commitment: vaultBalance.commitment, // From Obscura deposit (REQUIRED!)
+          takerCommitment: vaultBalance.commitment, // Taker's deposit commitment (REQUIRED for atomic swap!)
+          takerAddress: publicKey?.toBase58() || evmAddress, // Taker's wallet address (to receive asset)
+          marketMakerCommitment: quote.market_maker_commitment, // Market maker's deposit commitment (REQUIRED for atomic swap!)
           chainId: 'solana-devnet'
         })
       })
 
+      console.log('[DarkOTC] Response status:', response.status)
       const result = await response.json()
+      console.log('[DarkOTC] Response data:', result)
 
       if (!result.success) {
+        console.error('[DarkOTC] Accept quote failed:', result.error)
         throw new Error(result.error || 'Failed to accept quote')
       }
+
+      console.log('[DarkOTC] Quote accepted successfully!')
+      console.log('[DarkOTC] Settlement info:', {
+        nullifier: result.data?.nullifier,
+        txHash: result.data?.txHash,
+        zkCompressed: result.data?.zkCompressed,
+        compressionSignature: result.data?.compressionSignature
+      })
 
       setLoadingSteps(prev => prev.map((step, i) => 
         i === 2 ? { ...step, status: 'success' } :
@@ -866,7 +1034,7 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
           const nullifiers = JSON.parse(localStorage.getItem('obscura_nullifiers') || '[]')
           nullifiers.push({
             nullifier: result.data.nullifier,
-            quoteId: quote.quoteId,
+            quoteId: quote.id,
             timestamp: Date.now()
           })
           localStorage.setItem('obscura_nullifiers', JSON.stringify(nullifiers))
@@ -875,7 +1043,7 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
         showModal('Quote Accepted', {
           success: true,
           message: 'Quote accepted and settled with post-quantum security',
-          quoteId: quote.quoteId,
+          quoteId: quote.id,
           requestId: selectedRequest.id,
           nullifier: result.data.nullifier,
           txHash: result.data.txHash,
@@ -883,7 +1051,7 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
           privacy: 'Settlement completed with stealth addresses and WOTS+ signatures'
         }, true)
         
-        onSuccess('dark-otc-accept', quote.quoteId)
+        onSuccess('dark-otc-accept', quote.id)
         loadRequests()
         loadVaultBalance() // Refresh vault balance after settlement
         setSelectedRequest(null)
@@ -923,8 +1091,8 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
     if (quotes.length === 0) return null
     
     return quotes.reduce((best, quote) => {
-      const bestPrice = parseFloat(best.priceCommitment)
-      const quotePrice = parseFloat(quote.priceCommitment)
+      const bestPrice = parseFloat(best.price_commitment)
+      const quotePrice = parseFloat(quote.price_commitment)
       
       if (direction === 'buy') {
         // For buy, lower price is better
@@ -1660,14 +1828,14 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
                       <AnimatePresence mode="popLayout">
                         {quotes.map((quote, index) => {
                           const [baseToken, quoteToken] = selectedRequest.asset_pair.split('/')
-                          const pricePerUnit = formatAmount(quote.priceCommitment, quoteToken)
+                          const pricePerUnit = formatAmount(quote.price_commitment, quoteToken)
                           const amountToken = getTokenForDirection(selectedRequest.asset_pair, selectedRequest.direction)
                           const amount = formatAmount(selectedRequest.amount_commitment, amountToken)
                           const totalCost = (parseFloat(amount) * parseFloat(pricePerUnit)).toFixed(4)
                           
                           return (
                             <motion.div
-                              key={quote.quoteId}
+                              key={quote.id}
                               className="p-4 bg-[#0d0d12] border border-[#2a2a3a] rounded-lg hover:border-indigo-500/50 transition-colors"
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
@@ -1711,8 +1879,8 @@ export default function DarkOTCSection({ onSuccess, showModal, requireWalletConn
                                 </div>
                               </div>
                               <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-[#2a2a3a]">
-                                <span>MM: {quote.marketMakerPublicKey.slice(0, 8)}...{quote.marketMakerPublicKey.slice(-6)}</span>
-                                <span>Expires {formatTimeLeft(quote.expiresAt)}</span>
+                                <span>MM: {quote.market_maker_public_key.slice(0, 8)}...{quote.market_maker_public_key.slice(-6)}</span>
+                                <span>Expires {formatTimeLeft(quote.expires_at)}</span>
                               </div>
                             </motion.div>
                           )

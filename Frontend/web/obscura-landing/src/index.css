@@ -109,17 +109,24 @@
     animation: radarPulse 3.4s linear infinite;
   }
 
-  /* Marquee animation for partners */
+  /* Marquee animation for partners - seamless infinite scroll */
   @keyframes marquee {
     0% {
       transform: translateX(0);
     }
     100% {
-      transform: translateX(-50%);
+      transform: translateX(-100%);
     }
   }
 
   .animate-marquee {
-    animation: marquee 20s linear infinite;
+    animation: marquee 40s linear infinite;
+  }
+
+  /* Faster for mobile */
+  @media (max-width: 768px) {
+    .animate-marquee {
+      animation: marquee 5s linear infinite;
+    }
   }
 }

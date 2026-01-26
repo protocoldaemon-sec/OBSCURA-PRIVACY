@@ -34,13 +34,13 @@ const teamMembers = [
     url: 'https://x.com/fikriaf'
   },
   {
-    image: 'https://i.pravatar.cc/300?img=16',
-    title: 'Zidan',
-    subtitle: 'Smart Contract',
-    handle: '@caseypark',
+    image: '/teams/danzi.jpg',
+    title: 'ZidanCode',
+    subtitle: 'Smart Contract Developer',
+    handle: '@DeDanzi',
     borderColor: '#52057B',
     gradient: 'linear-gradient(195deg, #52057B, #000)',
-    url: 'https://x.com/DaemonProtocol'
+    url: 'https://x.com/DeDanzi'
   },
 ]
 
