@@ -785,6 +785,35 @@ export default function DepositSection({ onSuccess, showModal, requireWalletConn
       return
     }
 
+    // CRITICAL: Check if nullifier has been used in Dark OTC settlements
+    if (selectedNote.nullifierHash) {
+      try {
+        const { BACKEND_URL } = await import('@/lib/api')
+        console.log('[Withdraw] Checking if nullifier is used in Dark OTC...')
+        const response = await fetch(`${BACKEND_URL}/api/v1/rfq/check-nullifier/${selectedNote.nullifierHash}`)
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data?.isUsed) {
+            showModal('Deposit Already Used', {
+              error: 'This deposit has been used in a Dark OTC settlement',
+              details: `This deposit was used in a trade settlement and cannot be withdrawn.\n\nSettlement ID: ${result.data.settlementId || 'N/A'}\nUsed at: ${result.data.usedAt ? new Date(result.data.usedAt).toLocaleString() : 'N/A'}\n\nThe funds have already been transferred to the counterparty.`,
+              action: 'Select Another Deposit'
+            }, false)
+            
+            // Remove this deposit note from localStorage since it's used
+            removeDepositNote(selectedNote.commitment)
+            setDepositNotes(getDepositNotes())
+            setSelectedNote(null)
+            return
+          }
+        }
+      } catch (error) {
+        console.error('[Withdraw] Error checking nullifier:', error)
+        // Continue with withdrawal if backend check fails (don't block user)
+      }
+    }
+
     // Start scanning
     setScanStatus('scanning')
     setScanResult(null)
@@ -844,7 +873,8 @@ export default function DepositSection({ onSuccess, showModal, requireWalletConn
         nullifierHash: selectedNote.nullifierHash,
         recipient: withdrawRecipient,
         amount: selectedNote.amount,
-        chainId: selectedNote.chainId
+        chainId: selectedNote.chainId,
+        token: selectedNote.token || 'native' // Pass token type to backend
       })
 
       if (result.success) {
@@ -1168,10 +1198,10 @@ export default function DepositSection({ onSuccess, showModal, requireWalletConn
                       ? (note.chainId.includes('solana') ? 'SOL' : 'ETH')
                       : note.token.toUpperCase()
                     
-                    // Get chain logo
-                    const chainLogo = note.chainId.includes('solana') 
-                      ? CHAIN_LOGOS.solana 
-                      : CHAIN_LOGOS.ethereum
+                    // Get token logo (not chain logo!)
+                    const tokenLogo = note.token === 'native'
+                      ? (note.chainId.includes('solana') ? TOKEN_LOGOS.SOL : TOKEN_LOGOS.ETH)
+                      : TOKEN_LOGOS[note.token.toUpperCase() as keyof typeof TOKEN_LOGOS] || TOKEN_LOGOS.SOL
                     
                     // Format timestamp
                     const depositDate = new Date(note.timestamp)
@@ -1207,10 +1237,10 @@ export default function DepositSection({ onSuccess, showModal, requireWalletConn
                         layout
                       >
                         <div className="flex items-start gap-3">
-                          {/* Chain Logo */}
+                          {/* Token Logo (not chain logo!) */}
                           <img 
-                            src={chainLogo} 
-                            alt={note.chainId} 
+                            src={tokenLogo} 
+                            alt={displayToken} 
                             className="w-8 h-8 rounded-full flex-shrink-0 mt-0.5"
                           />
                           

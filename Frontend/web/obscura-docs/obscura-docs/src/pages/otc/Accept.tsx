@@ -44,10 +44,32 @@ export default function Accept() {
             fields={[
               { name: 'signature', type: 'string', required: true, description: 'WOTS+ signature (4288 hex characters). Must use NEW wallet.' },
               { name: 'publicKey', type: 'string', required: true, description: 'WOTS+ public key (4416 hex characters)' },
-              { name: 'message', type: 'string', required: true, description: 'Original signed message' },
-              { name: 'commitment', type: 'string', required: true, description: 'SIP commitment for settlement' },
+              { name: 'takerCommitment', type: 'string', required: true, description: 'Taker deposit commitment (for payment)' },
+              { name: 'takerNullifierHash', type: 'string', required: true, description: 'Nullifier hash from taker deposit note (CRITICAL!)' },
+              { name: 'takerAddress', type: 'string', required: true, description: 'Taker wallet address to receive asset (Solana: base58, Ethereum: hex)' },
+              { name: 'marketMakerCommitment', type: 'string', required: true, description: 'Market maker deposit commitment (for asset)' },
+              { name: 'marketMakerNullifierHash', type: 'string', required: false, description: 'Nullifier hash from MM deposit (optional if provided in quote)' },
+              { name: 'chainId', type: 'string', required: true, description: '"solana-devnet" or "sepolia"' },
             ]}
           />
+
+          <div className="mt-6 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+            <p className="text-purple-400 font-semibold mb-2">Atomic Swap Settlement</p>
+            <div className="text-[var(--text-secondary)] text-sm space-y-2">
+              <p><strong>Transfer 1:</strong> Taker pays Market Maker (payment token, e.g., USDC)</p>
+              <p><strong>Transfer 2:</strong> Market Maker sends Taker (asset token, e.g., SOL)</p>
+              <p>Both transfers execute atomically (both succeed or both fail). Balances updated via Arcium cSPL (off-chain, encrypted).</p>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+            <p className="text-red-400 font-semibold mb-2">⚠️ CRITICAL: Nullifier hashes MUST be from deposit notes!</p>
+            <p className="text-[var(--text-secondary)] text-sm">
+              Each deposit note has a unique nullifierHash. Backend uses this to withdraw from Obscura-LLMS vault. 
+              Frontend MUST extract nullifierHash from deposit note and send it to backend. 
+              If backend generates nullifier from commitment, it will cause "NullifierAlreadyUsed" errors.
+            </p>
+          </div>
 
           <div>
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Responses</h3>

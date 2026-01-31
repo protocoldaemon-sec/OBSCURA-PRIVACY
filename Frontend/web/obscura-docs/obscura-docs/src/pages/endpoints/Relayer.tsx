@@ -37,7 +37,7 @@ export default function Relayer() {
       </p>
 
       <div className="mb-8 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-        <p className="text-blue-400 font-semibold mb-2">🔄 How Relayer Works</p>
+        <p className="text-blue-400 font-semibold mb-2">How Relayer Works</p>
         <div className="text-[var(--text-secondary)] text-sm space-y-2">
           <p>1. User deposits to vault → gets deposit note</p>
           <p>2. User sends withdrawal request to relayer with nullifierHash</p>

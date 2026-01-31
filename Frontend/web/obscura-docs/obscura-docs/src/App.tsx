@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout'
 import Overview from './pages/Overview'
 import Status from './pages/endpoints/Status'
 import Deposit from './pages/endpoints/Deposit'
+import Balance from './pages/endpoints/Balance'
 import Withdraw from './pages/endpoints/Withdraw'
 import Batches from './pages/endpoints/Batches'
 import Relayer from './pages/endpoints/Relayer'
@@ -10,6 +11,7 @@ import QuoteRequest from './pages/otc/QuoteRequest'
 import Quote from './pages/otc/Quote'
 import Accept from './pages/otc/Accept'
 import Messages from './pages/otc/Messages'
+import NullifierTracking from './pages/otc/NullifierTracking'
 import Admin from './pages/otc/Admin'
 import ErrorCodes from './pages/reference/ErrorCodes'
 import SupportedChains from './pages/reference/SupportedChains'
@@ -24,6 +26,7 @@ function App() {
         <Route path="/" element={<Overview />} />
         <Route path="/vault/status" element={<Status />} />
         <Route path="/vault/deposit" element={<Deposit />} />
+        <Route path="/vault/balance" element={<Balance />} />
         <Route path="/vault/withdraw" element={<Withdraw />} />
         <Route path="/vault/batches" element={<Batches />} />
         <Route path="/vault/relayer" element={<Relayer />} />
@@ -31,6 +34,7 @@ function App() {
         <Route path="/otc/quote" element={<Quote />} />
         <Route path="/otc/accept" element={<Accept />} />
         <Route path="/otc/messages" element={<Messages />} />
+        <Route path="/otc/nullifier-tracking" element={<NullifierTracking />} />
         <Route path="/otc/admin" element={<Admin />} />
         <Route path="/reference/errors" element={<ErrorCodes />} />
         <Route path="/reference/chains" element={<SupportedChains />} />

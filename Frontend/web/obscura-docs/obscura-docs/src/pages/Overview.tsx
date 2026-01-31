@@ -205,30 +205,27 @@ SIPSettlement: 0x88dA9c5D9801cb33615f0A516eb1098dF1889DA9`
         
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Privacy Vault v0.5.1</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Privacy Vault v0.5.2</h3>
             <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)]">
               <ul className="space-y-2 text-[var(--text-secondary)]">
-                <li>Minimum deposit requirement (0.0003 SOL/ETH)</li>
-                <li>Frontend validation enhancements</li>
-                <li>Loading modal UX improvements</li>
-                <li>Console security hardening</li>
+                <li>Balance query endpoint (POST /api/v1/balance)</li>
+                <li>Real-time vault balance updates from Arcium cSPL</li>
+                <li>Dark OTC integration with automatic balance refresh</li>
+                <li>Off-chain balance verification without on-chain queries</li>
+                <li>Solana-only support (Arcium cSPL)</li>
               </ul>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Dark OTC RFQ v1.0.0</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Dark OTC RFQ v1.0.4</h3>
             <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)]">
               <ul className="space-y-2 text-[var(--text-secondary)]">
-                <li>Private quote request creation</li>
-                <li>Market maker quote submission</li>
-                <li>Confidential quote selection</li>
-                <li>Private messaging between taker and market maker</li>
-                <li>Market maker whitelist management (permissioned mode)</li>
-                <li>Off-chain balance integration (Arcium cSPL)</li>
-                <li>WOTS+ signature verification</li>
-                <li>Relayer network integration</li>
-                <li>ZK Compression (Solana only)</li>
+                <li>Nullifier tracking endpoints (/used-nullifiers, /check-nullifier)</li>
+                <li>Frontend sync: Auto-cleanup of used deposit notes across all accounts</li>
+                <li>Withdraw protection: Block withdrawals for deposits used in settlements</li>
+                <li>Settlement amount fix: Price treated as TOTAL price, not per unit</li>
+                <li>Calculation simplification: Use native decimals</li>
               </ul>
             </div>
           </div>

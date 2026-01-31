@@ -1,6 +1,7 @@
 # ============================================
-# Obscura Backend - Railway Deployment
+# Obscura Backend - Railway Deployment v0.5.2
 # Build context: root of repository
+# Includes: Balance query endpoint
 # ============================================
 
 # Stage 1: Build

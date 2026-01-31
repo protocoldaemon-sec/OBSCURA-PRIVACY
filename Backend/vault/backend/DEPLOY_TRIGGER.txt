@@ -1,0 +1,6 @@
+Railway Deploy Trigger
+Timestamp: 2026-01-26 03:15:00
+Reason: Force rebuild to include /api/v1/balance endpoint
+
+This file triggers Railway auto-deploy.
+Endpoint should be accessible after rebuild completes.

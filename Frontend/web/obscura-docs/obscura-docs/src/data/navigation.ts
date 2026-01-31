@@ -15,6 +15,7 @@ export const navigation: NavGroup[] = [
     items: [
       { title: 'Health & Status', href: '/vault/status' },
       { title: 'Deposit', href: '/vault/deposit' },
+      { title: 'Balance Query', href: '/vault/balance' },
       { title: 'Withdraw', href: '/vault/withdraw' },
       { title: 'Batch Management', href: '/vault/batches' },
       { title: 'Relayer Service', href: '/vault/relayer' },
@@ -29,6 +30,7 @@ export const navigation: NavGroup[] = [
       { title: 'Submit Quote', href: '/otc/quote' },
       { title: 'Accept Quote', href: '/otc/accept' },
       { title: 'Private Messages', href: '/otc/messages' },
+      { title: 'Nullifier Tracking', href: '/otc/nullifier-tracking' },
       { title: 'Admin Whitelist', href: '/otc/admin' },
     ],
     defaultOpen: true,

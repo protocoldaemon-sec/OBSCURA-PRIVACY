@@ -18,10 +18,15 @@ export default function Quote() {
       quotes: [
         {
           quoteId: "660e8400-e29b-41d4-a716-446655440001",
+          price: "150000000",
           priceCommitment: "150000000",
           marketMakerPublicKey: "0x...",
+          marketMakerAddress: "BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh",
+          marketMakerCommitment: "0xdef...",
+          marketMakerNullifierHash: "0x123...",
           expiresAt: 1737648000000,
-          status: "active"
+          status: "active",
+          createdAt: 1737640000000
         }
       ]
     }
@@ -51,8 +56,20 @@ export default function Quote() {
               { name: 'expirationTime', type: 'number', required: true, description: 'Quote expiration timestamp (cannot exceed request expiration)' },
               { name: 'signature', type: 'string', required: true, description: 'WOTS+ signature (4288 hex characters)' },
               { name: 'publicKey', type: 'string', required: true, description: 'WOTS+ public key (4416 hex characters)' },
+              { name: 'walletAddress', type: 'string', required: true, description: 'Solana wallet address (base58) for receiving payment when quote is accepted' },
+              { name: 'commitment', type: 'string', required: true, description: 'Market maker deposit commitment from Obscura-LLMS (required for atomic swap)' },
+              { name: 'nullifierHash', type: 'string', required: true, description: 'Nullifier hash from market maker deposit note (required for settlement)' },
+              { name: 'chainId', type: 'string', required: true, description: '"solana-devnet" or "sepolia"' },
             ]}
           />
+
+          <div className="mt-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+            <p className="text-red-400 font-semibold mb-2">⚠️ CRITICAL: Include commitment and nullifierHash!</p>
+            <p className="text-[var(--text-secondary)] text-sm">
+              Market makers MUST provide commitment and nullifierHash when submitting quotes. 
+              These are required for atomic swap settlement. Without them, taker cannot accept quote (settlement will fail).
+            </p>
+          </div>
 
           <div>
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Responses</h3>

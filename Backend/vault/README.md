@@ -1,4 +1,6 @@
-# Obscura Vault
+<div align="center">
+
+<img src="obscura-landing/public/logo-white.png" alt="Obscura Logo" width="200"/>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.0-black?logo=next.js)](https://nextjs.org/)
@@ -9,6 +11,90 @@
 **Post-Quantum Secure Privacy Protocol for Cross-Chain Asset Management**
 
 Obscura Vault combines WOTS+ (Winternitz One-Time Signatures) with advanced privacy technologies to provide quantum-resistant, privacy-preserving asset management across Solana and EVM chains.
+
+</div>
+
+---
+
+## Demo & Screenshots
+
+### Privacy Transfer
+
+Private deposits and withdrawals with quantum-resistant security and true anonymity.
+
+**Video Demo**:
+
+[📹 Watch Full Demo](docs/Privacy%20Transfer/Video_Privacy%20Transfer.mp4)
+
+**Screenshots**:
+
+<div align="center">
+
+<table>
+<tr>
+<td align="center"><b>Backend Logs</b></td>
+<td align="center"><b>Solflare History</b></td>
+</tr>
+<tr>
+<td><img src="docs/Privacy Transfer/Privacy Transfer_BE_Screenshot.png" alt="Privacy Transfer Backend" width="400"/></td>
+<td><img src="docs/Privacy Transfer/SS_Solflare_Privacy Transfer.png" alt="Privacy Transfer Solflare" width="400"/></td>
+</tr>
+</table>
+
+</div>
+
+**Key Features**:
+- ✅ Vault PDA hides relayer address (TRUE privacy)
+- ✅ Arcium cSPL for off-chain balance verification
+- ✅ Light Protocol ZK Compression (1000x cheaper)
+- ✅ No graph tracing possible
+
+---
+
+### Dark OTC Trading
+
+Private peer-to-peer trading with encrypted order books and automatic settlement.
+
+**Video Demos**:
+
+[📹 Watch Market Maker Demo (Device 1)](docs/Dark%20OCT/Video%20Device%201_Dark%20OCT.mp4)
+
+[📹 Watch Taker Demo (Device 2)](docs/Dark%20OCT/Video%20Device%202_Dark%20OCT.mp4)
+
+**Screenshots**:
+
+<div align="center">
+
+<table>
+<tr>
+<td align="center"><b>Backend Logs</b></td>
+<td align="center"><b>Solflare History</b></td>
+</tr>
+<tr>
+<td><img src="docs/Dark OCT/Dark OCT_BE_Screenshot.png" alt="Dark OTC Backend" width="400"/></td>
+<td><img src="docs/Dark OCT/SS_Solflare_Dark OCT.png" alt="Dark OTC Solflare" width="400"/></td>
+</tr>
+</table>
+
+</div>
+
+**Key Features**:
+- ✅ WOTS+ signed quotes (post-quantum secure)
+- ✅ Encrypted order books
+- ✅ Automatic settlement with dual nullifiers
+- ✅ Real-time price feeds
+
+---
+
+### Light Protocol ZK Compression Proof
+
+<div align="center">
+
+<img src="docs/proof_LP_ZK.png" alt="ZK Compression Proof" width="600"/>
+
+**1000x cheaper storage on Solana using Light Protocol ZK Compression**
+
+</div>
 
 ---
 

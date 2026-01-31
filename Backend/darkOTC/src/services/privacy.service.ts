@@ -223,6 +223,33 @@ export class PrivacyService {
   }
 
   /**
+   * Generate Nullifier from Commitment
+   * 
+   * Generates a deterministic nullifier hash from a commitment.
+   * This ensures each commitment has a unique nullifier.
+   * 
+   * Algorithm:
+   * 1. Hash commitment with SHA256 to get nullifier
+   * 2. Hash nullifier again to get nullifierHash
+   * 
+   * @param commitment - The commitment to generate nullifier from
+   * @returns NullifierHash (hex string)
+   */
+  generateNullifierFromCommitment(commitment: string): string {
+    // Hash commitment to get nullifier
+    const nullifier = crypto.createHash('sha256')
+      .update(commitment)
+      .digest('hex');
+    
+    // Hash nullifier to get nullifierHash
+    const nullifierHash = crypto.createHash('sha256')
+      .update(nullifier)
+      .digest('hex');
+    
+    return nullifierHash;
+  }
+
+  /**
    * Generate Nullifier
    * 
    * Generates a cryptographically secure random nullifier for double-spend protection.

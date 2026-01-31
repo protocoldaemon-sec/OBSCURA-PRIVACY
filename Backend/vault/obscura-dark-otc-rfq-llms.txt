@@ -489,7 +489,11 @@ Submit a quote (market makers only).
   "price": "1500000",
   "expirationTime": 1737648000000,
   "signature": "0x...",
-  "publicKey": "0x..."
+  "publicKey": "0x...",
+  "walletAddress": "BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh",
+  "commitment": "0xdef...",
+  "nullifierHash": "0x123...",
+  "chainId": "solana-devnet"
 }
 ```
 
@@ -497,12 +501,19 @@ Submit a quote (market makers only).
 - `quoteRequestId` (required): Quote request ID to respond to
 - `price` (required): Price PER UNIT as string (in base units, e.g., USDC per SOL). **VISIBLE to taker for comparison.**
 - `expirationTime` (required): Quote expiration timestamp (cannot exceed quote request expiration)
-- `signature` (required): **WOTS+ signature (hex string, 4288 characters)**. Must use NEW WOTS+ wallet (different from any previous signatures).
-- `publicKey` (required): **WOTS+ public key (hex string, 4416 characters)**. 
+- `signature` (required): Wallet signature (Solana: 88 chars base64, Ethereum: 132 chars hex)
+- `publicKey` (required): Wallet public key for signature verification
   - **Permissionless Mode**: Any public key accepted (default)
   - **Permissioned Mode**: Must be whitelisted as market maker
+- `walletAddress` (required): **Solana wallet address (base58 format) for settlement**. This is where you'll receive payment when quote is accepted.
+- `commitment` (optional but recommended): **Market maker's deposit commitment for atomic swap settlement**. From Obscura-LLMS deposit. Required for settlement to execute.
+- `nullifierHash` (optional but recommended): **Nullifier hash from market maker's deposit note**. Required for settlement. If not provided here, must be provided by taker when accepting quote.
+- `chainId` (optional): "solana-devnet" or "sepolia"
 
-**⚠️ CRITICAL: Generate NEW WOTS+ wallet for each quote submission!**
+**⚠️ IMPORTANT: Include `commitment` and `nullifierHash` for atomic swap settlement!**
+- Without commitment, settlement cannot execute and quote acceptance will fail
+- Without nullifierHash, taker must provide it when accepting (less convenient)
+- Best practice: Market maker provides both when submitting quote
 
 **Example:** For "buy 5 SOL", market maker quotes price="150000000" (150 USDC per SOL in base units). Total cost = 5 × 150 = 750 USDC.
 
@@ -519,6 +530,48 @@ Submit a quote (market makers only).
 ```
 
 **Note:** `priceCommitment` now returns plaintext price (for backward compatibility). Price is visible to taker for comparison.
+
+**⚠️ CRITICAL: Market makers MUST provide `commitment` and `nullifierHash` when submitting quotes!**
+- Commitment is from Obscura-LLMS deposit (same as taker)
+- NullifierHash is from the same deposit note (extract from `depositNote.nullifierHash`)
+- Required for atomic swap settlement
+- Without these, taker cannot accept quote (settlement will fail)
+- Market maker must have sufficient balance in vault for the asset they're selling
+
+**How to Get Commitment and NullifierHash:**
+```typescript
+// Market maker deposits to Obscura-LLMS first
+const depositResponse = await fetch('https://api.obscura-app.com/api/v1/deposit', {
+  method: 'POST',
+  body: JSON.stringify({
+    network: 'solana-devnet',
+    token: 'native', // SOL
+    amount: '5000000000' // 5 SOL
+  })
+});
+
+const depositNote = depositResponse.data.depositNote;
+// depositNote contains:
+// {
+//   commitment: "0xabc...",        ← Use this for 'commitment' field
+//   nullifierHash: "0x123...",     ← Use this for 'nullifierHash' field
+//   nullifier: "secret...",
+//   secret: "secret...",
+//   ...
+// }
+
+// Then submit quote with both fields
+await fetch('/api/v1/rfq/quote', {
+  method: 'POST',
+  body: JSON.stringify({
+    quoteRequestId: "...",
+    price: "150000000",
+    commitment: depositNote.commitment,      // ← From deposit
+    nullifierHash: depositNote.nullifierHash, // ← From deposit
+    // ... other fields
+  })
+});
+```
 
 **Error Response (403) - Not Whitelisted (Permissioned Mode Only):**
 ```json
@@ -547,29 +600,49 @@ Get all quotes for a quote request.
     "quotes": [
       {
         "quoteId": "660e8400-e29b-41d4-a716-446655440001",
+        "price": "150000000",
         "priceCommitment": "150000000",
         "marketMakerPublicKey": "0x...",
+        "marketMakerAddress": "BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh",
+        "marketMakerCommitment": "0xdef...",
+        "marketMakerNullifierHash": "0x123...",
         "expiresAt": 1737648000000,
-        "status": "active"
+        "status": "active",
+        "createdAt": 1737640000000
       },
       {
         "quoteId": "770e8400-e29b-41d4-a716-446655440002",
+        "price": "148000000",
         "priceCommitment": "148000000",
         "marketMakerPublicKey": "0x...",
+        "marketMakerAddress": "5CBiq8BYxUmXxxxxxxxxxxxxxxxxxxxxx",
+        "marketMakerCommitment": "0xghi...",
+        "marketMakerNullifierHash": "0x456...",
         "expiresAt": 1737648000000,
-        "status": "active"
+        "status": "active",
+        "createdAt": 1737640000000
       }
     ]
   }
 }
 ```
 
-**Note:** `priceCommitment` contains plaintext price per unit (in base units). Taker can calculate total cost: Amount × Price.
+**Response Fields:**
+- `price`: **PLAINTEXT price per unit** (e.g., "150000000" = 150 USDC per SOL in base units). This is the actual price, NOT a hash.
+- `priceCommitment`: Same as `price` (kept for backward compatibility)
+- `marketMakerCommitment`: Market maker's deposit commitment (used for atomic swap settlement)
+- `marketMakerNullifierHash`: Nullifier hash from market maker's deposit note (used for settlement)
+- Quotes without `marketMakerCommitment` or `marketMakerNullifierHash` may fail settlement (taker must provide them)
+
+**Note:** 
+- All field names are in camelCase for consistency
+- Price is VISIBLE to all users for fair trading (not hidden/hashed)
+- Taker can calculate total cost: Amount × Price
 
 ---
 
 #### POST /api/v1/rfq/quote/:id/accept
-Accept a quote.
+Accept a quote and execute atomic swap settlement.
 
 **URL Parameters:**
 - `id`: Quote ID (UUID)
@@ -579,16 +652,85 @@ Accept a quote.
 {
   "signature": "0x...",
   "publicKey": "0x...",
-  "commitment": "0x..."
+  "takerCommitment": "0xabc...",
+  "takerNullifierHash": "0x123...",
+  "takerAddress": "BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh",
+  "marketMakerCommitment": "0xdef...",
+  "marketMakerNullifierHash": "0x456...",
+  "chainId": "solana-devnet"
 }
 ```
 
 **Field Descriptions:**
-- `signature` (required): **WOTS+ signature (hex string, 4288 characters)**. Must use NEW WOTS+ wallet (different from create request wallet).
-- `publicKey` (required): **WOTS+ public key (hex string, 4416 characters)**. Must match the taker who created the quote request.
-- `commitment` (required): SIP commitment for settlement
+- `signature` (required): **WOTS+ signature (hex string, 4288 characters)**. Must use NEW WOTS+ wallet (different from create request wallet). Sign message: `accept_quote:{quoteId}` (backend generates this message).
+- `publicKey` (required): **WOTS+ public key (hex string, 4416 characters)**.
+- `takerCommitment` (required): Taker's deposit commitment (for payment). From Obscura-LLMS deposit.
+- `takerNullifierHash` (required): **Nullifier hash extracted from taker's deposit note**. CRITICAL: Must be provided by frontend, NOT generated by backend.
+- `takerAddress` (required): Taker's wallet address (to receive asset). Solana: base58, Ethereum: hex.
+- `marketMakerCommitment` (required): Market maker's deposit commitment (for asset). Must be provided by market maker.
+- `marketMakerNullifierHash` (optional): **Nullifier hash from market maker's deposit note**. If not provided, backend will use the nullifier hash stored in the quote (from when market maker submitted quote).
+- `chainId` (required): "solana-devnet" or "sepolia"
 
-**⚠️ CRITICAL: Generate NEW WOTS+ wallet for acceptance (different from create request)!**
+**⚠️ CRITICAL: Nullifier hashes MUST be extracted from deposit notes!**
+
+**Why Nullifier Hashes Are Required:**
+- Each deposit note has a unique `nullifierHash` that identifies the deposit
+- Backend uses this nullifier hash to withdraw from Obscura-LLMS vault
+- If backend generates nullifier from commitment, it will cause "NullifierAlreadyUsed" errors
+- Frontend MUST extract `nullifierHash` from deposit note and send it to backend
+
+**How to Get Nullifier Hashes:**
+```typescript
+// When user deposits to Obscura-LLMS, they receive a deposit note:
+const depositResponse = await fetch('https://api.obscura-app.com/api/v1/deposit', {
+  method: 'POST',
+  body: JSON.stringify({
+    network: 'solana-devnet',
+    token: 'native',
+    amount: '5000000000'
+  })
+});
+
+const depositNote = depositResponse.data.depositNote;
+// depositNote contains:
+// {
+//   commitment: "0xabc...",
+//   nullifierHash: "0x123...",  ← EXTRACT THIS!
+//   nullifier: "secret...",
+//   secret: "secret...",
+//   ...
+// }
+
+// When accepting quote, send the nullifierHash:
+await fetch('/api/v1/rfq/quote/:id/accept', {
+  method: 'POST',
+  body: JSON.stringify({
+    takerCommitment: depositNote.commitment,
+    takerNullifierHash: depositNote.nullifierHash,  ← SEND THIS!
+    // ... other fields
+  })
+});
+```
+
+**⚠️ CRITICAL: All settlement parameters are required for atomic swap!**
+
+**Atomic Swap Flow:**
+1. **Transfer 1**: Taker pays Market Maker (payment token, e.g., USDC)
+2. **Transfer 2**: Market Maker sends Taker (asset token, e.g., SOL)
+3. Both transfers execute atomically (both succeed or both fail)
+4. Balances updated via Arcium cSPL (off-chain, encrypted)
+
+**Example:**
+```
+Quote Request: BUY 5 SOL with USDC
+Quote: 150 USDC per SOL (total: 750 USDC)
+
+Atomic Swap:
+- Taker vault USDC: -750 USDC
+- Market Maker vault USDC: +750 USDC
+- Market Maker vault SOL: -5 SOL
+- Taker vault SOL: +5 SOL
+```
 
 **Success Response (200):**
 ```json
@@ -865,13 +1007,25 @@ console.log('Amount (visible):', result.data.commitment); // Returns plaintext a
 
 ### 2. Market Maker Submits Quote
 ```typescript
-// Step 1: Generate WOTS+ wallet
-// Note: In permissionless mode (default), no whitelist needed!
-// In permissioned mode, market maker must be whitelisted first.
-const mmWallet = createWallet('mm-secret-seed', 'mm-tag');
-const mmPublicKey = Buffer.from(mmWallet.wots).toString('hex');
+// Step 1: Connect wallet (Phantom for Solana)
+const wallet = await window.solana.connect();
+const walletAddress = wallet.publicKey.toBase58(); // e.g., "BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh"
 
-// Step 2: Create quote (after seeing amount = 5 SOL)
+// Step 2: Get market maker's deposit commitment
+// Market maker MUST deposit first to get commitment
+const depositResponse = await fetch('https://api.obscura-app.com/api/v1/deposit', {
+  method: 'POST',
+  body: JSON.stringify({
+    network: 'solana-devnet',
+    token: 'SOL', // Asset they're selling
+    amount: '5000000000', // 5 SOL in lamports
+    walletAddress
+  })
+});
+
+const { commitment: mmCommitment } = (await depositResponse.json()).data.depositNote;
+
+// Step 3: Create quote (after seeing amount = 5 SOL)
 const quoteData = {
   quoteRequestId: '550e8400-e29b-41d4-a716-446655440000',
   price: '150000000000', // 150 USDC per SOL (price per unit, VISIBLE to taker)
@@ -880,20 +1034,24 @@ const quoteData = {
 
 // Taker will calculate: Total = 5 SOL × 150 USDC/SOL = 750 USDC
 
-// Step 3: Sign the quote
-const message = JSON.stringify(quoteData);
+// Step 4: Sign the quote with wallet
+const message = `submit_quote:${quoteData.quoteRequestId}:${quoteData.price}:${quoteData.expirationTime}`;
 const messageBytes = new TextEncoder().encode(message);
-const signature = mmWallet.sign(messageBytes);
-const signatureHex = Buffer.from(signature).toString('hex');
+const signatureBytes = await wallet.signMessage(messageBytes);
+const signature = bs58.encode(signatureBytes); // Solana signature (base64)
+const publicKey = wallet.publicKey.toBase58();
 
-// Step 4: Submit to API
+// Step 5: Submit to API
 const response = await fetch('https://obscura-dark-api.daemonprotocol.com/api/v1/rfq/quote', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     ...quoteData,
-    signature: signatureHex,
-    publicKey: mmPublicKey,
+    signature,
+    publicKey,
+    walletAddress, // ← IMPORTANT: Your Solana address for receiving payment
+    commitment: mmCommitment, // ← CRITICAL: For atomic swap settlement
+    chainId: 'solana-devnet'
   }),
 });
 
@@ -920,22 +1078,36 @@ const selectedQuote = quotes.reduce((best, quote) =>
   parseFloat(quote.priceCommitment) < parseFloat(best.priceCommitment) ? quote : best
 );
 
-// Step 3: Generate new WOTS+ wallet for acceptance (one-time signature!)
+// Step 3: Verify quote has commitment (required for settlement)
+if (!selectedQuote.marketMakerCommitment) {
+  throw new Error('Selected quote does not have commitment - cannot settle');
+}
+
+// Step 4: Get taker's wallet address
+const wallet = await window.solana.connect();
+const takerAddress = wallet.publicKey.toBase58();
+
+// Step 5: Get taker's deposit commitment (from earlier deposit)
+const takerCommitment = localStorage.getItem('takerCommitment'); // From deposit
+
+// Step 6: Generate new WOTS+ wallet for acceptance (one-time signature!)
 const acceptWallet = createWallet('accept-secret-seed', 'accept-tag');
 const acceptPublicKey = Buffer.from(acceptWallet.wots).toString('hex');
 
-// Step 4: Create acceptance data
+// Step 7: Create acceptance data
 const acceptData = {
-  commitment: '0x...', // SIP commitment from Obscura-LLMS deposit
+  takerCommitment,
+  takerAddress,
+  chainId: 'solana-devnet'
 };
 
-// Step 5: Sign the acceptance
+// Step 8: Sign the acceptance
 const message = JSON.stringify({ quoteId: selectedQuote.quoteId, ...acceptData });
 const messageBytes = new TextEncoder().encode(message);
 const signature = acceptWallet.sign(messageBytes);
 const signatureHex = Buffer.from(signature).toString('hex');
 
-// Step 6: Submit to API
+// Step 9: Submit to API
 const response = await fetch(
   `https://obscura-dark-api.daemonprotocol.com/api/v1/rfq/quote/${selectedQuote.quoteId}/accept`,
   {
@@ -953,6 +1125,21 @@ const result = await response.json();
 console.log('Nullifier:', result.data.nullifier); // KEEP SAFE!
 console.log('TX Hash:', result.data.txHash);
 console.log('ZK Compressed:', result.data.zkCompressed);
+
+// Step 10: Wait for settlement and refresh vault balance
+await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+
+// Step 11: Query vault balance from Obscura-LLMS (NOT wallet balance!)
+const balanceResponse = await fetch('https://api.obscura-app.com/api/v1/balance', {
+  method: 'POST',
+  body: JSON.stringify({
+    commitment: takerCommitment,
+    chainId: 'solana-devnet'
+  })
+});
+
+const balanceData = await balanceResponse.json();
+console.log('New vault balance:', balanceData.balance);
 ```
 
 ---
@@ -1210,9 +1397,206 @@ For issues or questions:
 
 ---
 
+### Nullifier Tracking Endpoints
+
+#### GET /api/v1/rfq/used-nullifiers
+Get all used nullifiers for deposit note cleanup.
+
+**Purpose**: Frontend uses this to auto-clean deposit notes that have been used in settlements across all accounts (including market makers in different browsers).
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "usedNullifiers": [
+      "0x123...",
+      "0x456...",
+      "0x789..."
+    ]
+  }
+}
+```
+
+**Frontend Usage:**
+```typescript
+// Auto-clean deposit notes on app load
+const response = await fetch('/api/v1/rfq/used-nullifiers');
+const { usedNullifiers } = (await response.json()).data;
+
+// Remove deposit notes with used nullifiers
+const depositNotes = JSON.parse(localStorage.getItem('depositNotes') || '[]');
+const cleanedNotes = depositNotes.filter(note => 
+  !usedNullifiers.includes(note.nullifierHash)
+);
+localStorage.setItem('depositNotes', JSON.stringify(cleanedNotes));
+```
+
+---
+
+#### GET /api/v1/rfq/check-nullifier/:nullifierHash
+Check if a specific nullifier has been used.
+
+**Purpose**: Frontend uses this before withdraw to prevent withdrawing deposits that have been used in settlements.
+
+**URL Parameters:**
+- `nullifierHash`: Nullifier hash to check (hex string)
+
+**Success Response (200) - Nullifier Used:**
+```json
+{
+  "success": true,
+  "data": {
+    "isUsed": true,
+    "quoteId": "660e8400-e29b-41d4-a716-446655440001",
+    "entityType": "taker",
+    "status": "settled",
+    "usedAt": 1737640000000
+  }
+}
+```
+
+**Success Response (200) - Nullifier Not Used:**
+```json
+{
+  "success": true,
+  "data": {
+    "isUsed": false
+  }
+}
+```
+
+**Frontend Usage:**
+```typescript
+// Before withdraw, check if nullifier is used
+const nullifierHash = depositNote.nullifierHash;
+const response = await fetch(`/api/v1/rfq/check-nullifier/${nullifierHash}`);
+const { isUsed } = (await response.json()).data;
+
+if (isUsed) {
+  alert('This deposit has been used in a settlement and cannot be withdrawn');
+  // Remove from localStorage
+  removeDepositNote(nullifierHash);
+  return;
+}
+
+// Proceed with withdraw
+await withdrawFromVault(depositNote);
+```
+
+---
+
+#### POST /api/v1/rfq/mark-nullifier-used
+Mark a nullifier as used (admin only).
+
+**Purpose**: Internal services can manually mark nullifiers as used. Requires admin API key authentication.
+
+**Authentication**: Requires `ADMIN_API_KEY` in Authorization header.
+
+**Request Headers:**
+```
+Authorization: Bearer your-admin-api-key-here
+```
+
+**Request Body:**
+```json
+{
+  "nullifierHash": "0x123...",
+  "quoteId": "660e8400-e29b-41d4-a716-446655440001",
+  "entityType": "taker",
+  "status": "settled"
+}
+```
+
+**Field Descriptions:**
+- `nullifierHash` (required): Nullifier hash to mark as used (hex string)
+- `quoteId` (optional): Associated quote ID (defaults to null)
+- `entityType` (optional): Entity type - "taker", "market_maker", or "manual" (defaults to "manual")
+- `status` (optional): Status - "pending" or "settled" (defaults to "settled")
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "nullifierHash": "0x123...",
+    "quoteId": "660e8400-e29b-41d4-a716-446655440001",
+    "entityType": "taker",
+    "status": "settled",
+    "markedAt": 1737640000000
+  }
+}
+```
+
+**Error Response (403) - Invalid API Key:**
+```json
+{
+  "success": false,
+  "error": "Invalid or missing admin API key",
+  "code": "NOT_AUTHORIZED"
+}
+```
+
+**Error Response (400) - Nullifier Already Used:**
+```json
+{
+  "success": false,
+  "error": "Nullifier already marked as used",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "existingQuoteId": "550e8400-e29b-41d4-a716-446655440000",
+    "existingStatus": "settled",
+    "existingEntityType": "taker"
+  }
+}
+```
+
+**Usage Example:**
+```bash
+# Mark nullifier as used
+curl -X POST http://localhost:3000/api/v1/rfq/mark-nullifier-used \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-admin-api-key-here" \
+  -d '{
+    "nullifierHash": "0x123...",
+    "quoteId": "660e8400-e29b-41d4-a716-446655440001",
+    "entityType": "taker",
+    "status": "settled"
+  }'
+```
+
+---
+
 ## CHANGELOG
 
-### v1.0.0 (Current)
+### v1.0.4 (Current)
+- ✅ **Nullifier Tracking Endpoints**: Added `/used-nullifiers` and `/check-nullifier/:hash` endpoints
+- ✅ **Frontend Sync**: Enable auto-cleanup of used deposit notes across all accounts
+- ✅ **Withdraw Protection**: Block withdrawals for deposits used in settlements
+- ✅ **Settlement Amount Fix**: Price is now treated as TOTAL price, not per unit
+- ✅ **Calculation Simplification**: Removed complex decimal conversions, use native decimals
+
+### v1.0.3
+- ✅ **Backend Security**: Nullifier and commitment tracking to prevent double-spend attacks
+- ✅ **API Bypass Protection**: Validate nullifier/commitment reuse at backend level
+- ✅ **Database Tables**: Added `used_nullifiers` and `used_commitments` tables
+- ✅ **Clear Response Format**: Added explicit `price` field in get quotes response
+- ✅ **Field Naming**: Transformed response to camelCase for consistency
+
+### v1.0.2
+- ✅ **Market Maker Nullifier Hash**: Accept and store `nullifierHash` in submit quote endpoint
+- ✅ **Database Update**: Added `market_maker_nullifier_hash` column to quotes table
+- ✅ **Get Quotes Enhancement**: Return `marketMakerNullifierHash` in quotes response
+- ✅ **Accept Quote Improvement**: Use stored nullifier hash from quote if not provided in request
+- ✅ **Backward Compatibility**: All nullifier hash fields are optional for smooth migration
+
+### v1.0.1
+- ✅ **Nullifier Hash Fix**: Accept `takerNullifierHash` and `marketMakerNullifierHash` from frontend
+- ✅ **Settlement Fix**: Use frontend-provided nullifier hashes instead of generating from commitments
+- ✅ **Error Prevention**: Fixes "NullifierAlreadyUsed" errors by using correct nullifier from deposit notes
+- ✅ **API Update**: Accept quote endpoint now requires nullifier hashes for both taker and market maker
+
+### v1.0.0
 - ✅ Private quote request creation
 - ✅ Market maker quote submission
 - ✅ Confidential quote selection

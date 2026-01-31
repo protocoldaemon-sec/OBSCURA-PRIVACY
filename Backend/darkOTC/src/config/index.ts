@@ -41,6 +41,7 @@ export const config = {
   
   admin: {
     publicKey: process.env.ADMIN_PUBLIC_KEY || '',
+    apiKey: process.env.ADMIN_API_KEY || '',
   },
   
   whitelist: {

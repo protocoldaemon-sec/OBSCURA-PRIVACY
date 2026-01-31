@@ -6,6 +6,7 @@ const validRoutes = [
   '/',
   '/vault/status',
   '/vault/deposit',
+  '/vault/balance',
   '/vault/withdraw',
   '/vault/batches',
   '/vault/relayer',

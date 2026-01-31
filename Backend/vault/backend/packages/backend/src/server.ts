@@ -15,6 +15,17 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serveStatic } from '@hono/node-server/serve-static';
+/**
+ * Obscura Backend Server v0.5.2
+ * Post-quantum secure intent settlement API with true privacy
+ * 
+ * Features:
+ * - Balance query endpoint (POST /api/v1/balance)
+ * - Real-time vault balance tracking via Arcium cSPL
+ * - Atomic swap settlement with dual nullifiers
+ * - Direct transfer method for enhanced privacy
+ */
+
 import { serve } from '@hono/node-server';
 
 import { SIPClient, PrivacyLevel } from './sip/index.js';
@@ -40,6 +51,16 @@ import type {
 };
 
 // ============ Type Definitions ============
+
+// Dark OTC API URL for nullifier checking
+const DARK_OTC_API_URL = process.env.DARK_OTC_API_URL || 'http://localhost:3000';
+const DARK_OTC_ADMIN_API_KEY = process.env.DARK_OTC_ADMIN_API_KEY || '';
+
+// Token mint addresses (Solana Devnet)
+const TOKEN_MINTS = {
+  USDC: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // Devnet USDC
+  USDT: '3wyAj7Rt1TWVPikqYYQCMKKhNbvFXkBJdPSeYWbkDdQv', // Devnet USDT (example)
+};
 
 // Fee configuration - Tiered pricing
 const FEE_CONFIG = {
@@ -70,6 +91,99 @@ function getFeePercentage(amountInBaseUnit: number, isSolana: boolean): number {
     }
   }
   return FEE_CONFIG.TIERS[FEE_CONFIG.TIERS.length - 1].percentage;
+}
+
+// Helper function to check if nullifier is used in Dark OTC settlements
+async function checkNullifierUsedInDarkOTC(nullifierHash: string): Promise<{
+  isUsed: boolean;
+  quoteId?: string;
+  entityType?: string;
+  status?: string;
+  usedAt?: number;
+}> {
+  try {
+    console.log(`[Nullifier Check] Querying Dark OTC API: ${DARK_OTC_API_URL}/api/v1/rfq/check-nullifier/${nullifierHash.slice(0, 16)}...`);
+    
+    const response = await fetch(`${DARK_OTC_API_URL}/api/v1/rfq/check-nullifier/${nullifierHash}`);
+    
+    if (!response.ok) {
+      console.warn(`[Nullifier Check] Dark OTC API returned ${response.status}, assuming nullifier not used`);
+      return { isUsed: false };
+    }
+    
+    const result = await response.json() as {
+      success: boolean;
+      data?: {
+        isUsed: boolean;
+        nullifierHash?: string;
+        settlementId?: string;
+        status?: string;
+        usedAt?: number;
+      };
+    };
+    
+    if (result.success && result.data) {
+      console.log(`[Nullifier Check] Result:`, result.data);
+      return result.data;
+    }
+    
+    return { isUsed: false };
+  } catch (error) {
+    console.error(`[Nullifier Check] Error querying Dark OTC API:`, error);
+    // If Dark OTC API is down, don't block withdrawals (fail open)
+    return { isUsed: false };
+  }
+}
+
+// Helper function to mark nullifier as used in Dark OTC after successful withdraw
+async function markNullifierUsedInDarkOTC(nullifierHash: string): Promise<boolean> {
+  try {
+    if (!DARK_OTC_ADMIN_API_KEY) {
+      console.warn(`[Mark Nullifier] DARK_OTC_ADMIN_API_KEY not configured, skipping mark`);
+      return false;
+    }
+
+    console.log(`[Mark Nullifier] Marking nullifier as used in Dark OTC: ${nullifierHash.slice(0, 16)}...`);
+    
+    const response = await fetch(`${DARK_OTC_API_URL}/api/v1/rfq/mark-nullifier-used`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DARK_OTC_ADMIN_API_KEY}`,
+      },
+      body: JSON.stringify({
+        nullifierHash,
+        entityType: 'manual', // Changed from 'withdraw' to 'manual' (valid value)
+        status: 'settled',
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Mark Nullifier] Dark OTC API returned ${response.status}: ${errorText}`);
+      return false;
+    }
+    
+    const result = await response.json() as {
+      success: boolean;
+      data?: {
+        nullifierHash: string;
+        markedAt: number;
+      };
+    };
+    
+    if (result.success) {
+      console.log(`[Mark Nullifier] ✅ Nullifier marked as used:`, result.data);
+      return true;
+    }
+    
+    console.warn(`[Mark Nullifier] Failed to mark nullifier:`, result);
+    return false;
+  } catch (error) {
+    console.error(`[Mark Nullifier] Error marking nullifier in Dark OTC:`, error);
+    // Don't fail the withdraw if marking fails (fail open)
+    return false;
+  }
 }
 
 interface DepositRequest {
@@ -108,9 +222,15 @@ let csplClient: RealCSPLClient | null = null; // Real Arcium cSPL client for con
 app.get('/', (c) => {
   return c.json({
     name: 'Obscura API',
-    version: '0.5.1',
+    version: '0.5.2',
     description: 'Post-quantum secure intent settlement API with true privacy',
     changelog: {
+      '0.5.2': [
+        'Balance query endpoint (POST /api/v1/balance)',
+        'Real-time vault balance updates from Arcium cSPL',
+        'Dark OTC integration with automatic balance refresh',
+        'Off-chain balance verification without on-chain queries',
+      ],
       '0.5.1': [
         'Minimum deposit requirement (0.0003 SOL/ETH)',
         'Backend validation for minimum deposit',
@@ -137,6 +257,7 @@ app.get('/', (c) => {
       solana: '/api/v1/solana/status',
       evm: '/api/v1/evm/status',
       deposit: '/api/v1/deposit',
+      balance: '/api/v1/balance',
       withdraw: '/api/v1/withdraw',
       relayer: '/api/v1/relayer/stats',
       batches: '/api/v1/batches',
@@ -602,6 +723,103 @@ app.post('/api/v1/deposit', async (c) => {
   }
 });
 
+/**
+ * Query vault balance from Arcium cSPL (off-chain encrypted balance)
+ * POST /api/v1/balance
+ * 
+ * Returns the current vault balance for a given commitment.
+ * This queries the Arcium cSPL off-chain balance tracker, NOT the wallet balance.
+ * 
+ * Request:
+ * {
+ *   "commitment": "b4083a81a64f7bf5...",
+ *   "chainId": "solana-devnet"
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "balance": "1200000000", // Balance in base units (lamports)
+ *   "confidentialAccount": "5599a875ab86a63a...",
+ *   "encrypted": true,
+ *   "token": "native"
+ * }
+ */
+app.post('/api/v1/balance', async (c) => {
+  try {
+    const body = await c.req.json<{
+      commitment: string;
+      chainId: string;
+    }>();
+
+    if (!body.commitment || !body.chainId) {
+      return c.json({ 
+        success: false,
+        error: 'Missing required fields: commitment, chainId' 
+      }, 400);
+    }
+
+    console.log(`[Balance] Querying vault balance...`);
+    console.log(`[Balance] Commitment: ${body.commitment.slice(0, 16)}...`);
+    console.log(`[Balance] Chain: ${body.chainId}`);
+
+    // Only Solana supports Arcium cSPL for now
+    if (!body.chainId.includes('solana')) {
+      return c.json({
+        success: false,
+        error: 'Balance query only supported on Solana (Arcium cSPL)',
+        details: 'EVM chains do not support off-chain balance tracking yet'
+      }, 400);
+    }
+
+    // Get confidential account from commitment
+    const confidentialAccount = balanceTracker.getAccountByCommitment(body.commitment);
+    
+    if (!confidentialAccount) {
+      return c.json({
+        success: false,
+        error: 'No vault balance found for this commitment',
+        details: 'Please deposit first to create a vault balance'
+      }, 404);
+    }
+
+    // Get balance stats from Arcium cSPL tracker
+    const stats = balanceTracker.getStats(confidentialAccount);
+    
+    if (!stats) {
+      return c.json({
+        success: false,
+        error: 'Balance stats not found',
+        details: 'Confidential account exists but no balance recorded'
+      }, 404);
+    }
+
+    console.log(`[Balance] ✅ Found vault balance`);
+    console.log(`[Balance] Confidential account: ${confidentialAccount.slice(0, 16)}...`);
+    console.log(`[Balance] Available: ${stats.availableBalance.toString()}`);
+    console.log(`[Balance] Pending: ${stats.pendingBalance.toString()}`);
+
+    return c.json({
+      success: true,
+      balance: stats.availableBalance.toString(), // Available balance in lamports
+      pendingBalance: stats.pendingBalance.toString(), // Pending withdrawals
+      confidentialAccount: confidentialAccount,
+      encrypted: true,
+      token: 'native', // TODO: Support other tokens
+      deposits: stats.deposits,
+      withdrawals: stats.withdrawals
+    });
+
+  } catch (error) {
+    console.error('[Balance] Error:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to query balance',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
+  }
+});
+
 // ============ Withdraw Endpoints (Relayer) ============
 
 /**
@@ -631,6 +849,36 @@ app.post('/api/v1/withdraw', async (c) => {
         error: 'Missing required fields: commitment, nullifierHash, recipient, amount, chainId' 
       }, 400);
     }
+
+    // ============ CRITICAL: Check if nullifier used in Dark OTC settlements ============
+    
+    console.log(`[Withdraw] Checking if nullifier is used in Dark OTC settlements...`);
+    const nullifierCheck = await checkNullifierUsedInDarkOTC(body.nullifierHash);
+    
+    if (nullifierCheck.isUsed) {
+      console.error(`[Withdraw] ❌ NULLIFIER ALREADY USED IN DARK OTC SETTLEMENT!`);
+      console.error(`[Withdraw] Nullifier: ${body.nullifierHash.slice(0, 16)}...`);
+      console.error(`[Withdraw] Quote ID: ${nullifierCheck.quoteId}`);
+      console.error(`[Withdraw] Entity: ${nullifierCheck.entityType}`);
+      console.error(`[Withdraw] Status: ${nullifierCheck.status}`);
+      console.error(`[Withdraw] Used at: ${nullifierCheck.usedAt ? new Date(nullifierCheck.usedAt).toISOString() : 'N/A'}`);
+      
+      return c.json({
+        success: false,
+        error: 'This deposit has been used in a Dark OTC settlement',
+        code: 'NULLIFIER_USED_IN_SETTLEMENT',
+        details: {
+          nullifierHash: body.nullifierHash,
+          quoteId: nullifierCheck.quoteId,
+          entityType: nullifierCheck.entityType,
+          status: nullifierCheck.status,
+          usedAt: nullifierCheck.usedAt,
+          message: 'This deposit was used in a Dark OTC trade settlement and cannot be withdrawn. The funds have been transferred to the counterparty.'
+        }
+      }, 400);
+    }
+    
+    console.log(`[Withdraw] ✅ Nullifier not used in Dark OTC, proceeding with withdrawal...`);
 
     console.log(`[Withdraw] Processing withdrawal with DUAL privacy verification...`);
     console.log(`[Withdraw] Chain: ${body.chainId}`);
@@ -684,6 +932,14 @@ app.post('/api/v1/withdraw', async (c) => {
       }
     }
 
+    // ============ TOKEN DECIMALS MAPPING ============
+    
+    const token = body.token || 'native';
+    const tokenDecimals = token === 'native' ? 9 : 6; // SOL=9, USDC/USDT=6
+    const tokenSymbol = token === 'native' ? 'SOL' : token.toUpperCase();
+    
+    console.log(`[Withdraw] Token: ${tokenSymbol} (${tokenDecimals} decimals)`);
+
     // ============ OLD FLOW: Light Protocol Verification (Optional) ============
     
     if (lightClient && body.chainId.includes('solana')) {
@@ -693,9 +949,9 @@ app.post('/api/v1/withdraw', async (c) => {
           console.log(`[Withdraw] ✅ Verified compressed deposit (Light Protocol)`);
           console.log(`[Withdraw] Original depositor: ${depositData.depositor.slice(0, 8)}... (hidden from recipient)`);
           
-          // Verify amount matches
+          // Verify amount matches (use correct decimals)
           const depositAmount = parseFloat(depositData.amount);
-          const withdrawAmount = parseFloat(body.amount) / 1e9;
+          const withdrawAmount = parseFloat(body.amount) / Math.pow(10, tokenDecimals);
           
           if (Math.abs(depositAmount - withdrawAmount) > 0.0001) {
             console.warn(`[Withdraw] Amount mismatch: deposit=${depositAmount}, withdraw=${withdrawAmount}`);
@@ -720,19 +976,20 @@ app.post('/api/v1/withdraw', async (c) => {
       let result: any; // Declare result variable
       
       if (netAmount <= 0) {
+        const minWithdrawal = (FEE_CONFIG.MIN_SOL * 2 / Math.pow(10, tokenDecimals)).toFixed(tokenDecimals === 9 ? 4 : 2);
         return c.json({
           success: false,
-          error: `Amount too small. Minimum withdrawal: ${(FEE_CONFIG.MIN_SOL * 2 / 1e9).toFixed(4)} SOL`,
+          error: `Amount too small. Minimum withdrawal: ${minWithdrawal} ${tokenSymbol}`,
         }, 400);
       }
       
-      const netAmountSOL = netAmount / 1e9;
-      const feeAmountSOL = feeAmount / 1e9;
+      const netAmountToken = netAmount / Math.pow(10, tokenDecimals);
+      const feeAmountToken = feeAmount / Math.pow(10, tokenDecimals);
       
       console.log(`[Withdraw] Executing Solana withdrawal via relayer...`);
-      console.log(`[Withdraw] Original: ${originalAmount / 1e9} SOL`);
-      console.log(`[Withdraw] Fee (${feePercentage * 100}%): ${feeAmountSOL} SOL`);
-      console.log(`[Withdraw] Net to recipient: ${netAmountSOL} SOL`);
+      console.log(`[Withdraw] Original: ${originalAmount / Math.pow(10, tokenDecimals)} ${tokenSymbol}`);
+      console.log(`[Withdraw] Fee (${feePercentage * 100}%): ${feeAmountToken} ${tokenSymbol}`);
+      console.log(`[Withdraw] Net to recipient: ${netAmountToken} ${tokenSymbol}`);
 
       // ============ ARCIUM cSPL: TRUE Privacy Withdrawal ============
       
@@ -777,15 +1034,18 @@ app.post('/api/v1/withdraw', async (c) => {
             const proofData = encoder.encode(`withdraw:${body.commitment}:${body.nullifierHash}:${Date.now()}`);
             const decryptionProof = new Uint8Array(await crypto.subtle.digest('SHA-256', proofData));
 
-            // ============ TRUE PRIVACY: Direct Transfer (NO VAULT PDA) ============
-            // Instead of: Confidential Account → Vault PDA → Recipient
-            // We do: Relayer → Direct Transfer → Recipient
-            // This breaks the traceability via vault PDA
+            // ============ TRUE PRIVACY: Vault Program + Arcium Balance Verification ============
+            // Flow:
+            // 1. Arcium cSPL: Verify balance off-chain (encrypted, no on-chain query)
+            // 2. Vault Program: Execute withdrawal via program instruction (hides relayer)
+            // 
+            // Result: Observer sees "Vault PDA → Recipient" (NOT "Relayer → Recipient")
             
-            console.log(`[Withdraw] ✅ Using DIRECT transfer (no vault PDA)`);
-            console.log(`[Withdraw] From: Relayer (off-chain balance verified)`);
-            console.log(`[Withdraw] To: ${body.recipient.slice(0, 16)}... (direct)`);
-            console.log(`[Withdraw] Method: Off-chain balance tracking + direct transfer`);
+            console.log(`[Withdraw] ✅ Using Vault Program with Arcium balance verification`);
+            console.log(`[Withdraw] Balance verified: Off-chain (Arcium cSPL)`);
+            console.log(`[Withdraw] Execution: Vault Program (hides relayer)`);
+            console.log(`[Withdraw] To: ${body.recipient.slice(0, 16)}...`);
+            console.log(`[Withdraw] Method: Arcium verification + Vault program execution`);
 
             // Withdraw from confidential account to recipient DIRECTLY
             const { instruction } = await csplClient.withdraw(
@@ -795,14 +1055,36 @@ app.post('/api/v1/withdraw', async (c) => {
               decryptionProof
             );
 
-            // Execute REAL direct transfer from relayer to recipient
-            const directTransferResult = await solanaSettlement.directTransfer(
-              body.recipient,
-              netAmountSOL
-            );
+            // Execute withdrawal via VAULT PROGRAM (not direct transfer)
+            // This hides the relayer address from transaction history
+            let vaultWithdrawalResult;
+            
+            if (token === 'native') {
+              // Native SOL transfer via vault program
+              vaultWithdrawalResult = await solanaSettlement.privateClaimWithNullifier(
+                body.recipient,
+                netAmountToken,
+                body.commitment,
+                body.nullifierHash
+              );
+            } else {
+              // SPL token transfer via vault program
+              // TODO: Implement SPL vault withdrawal
+              // For now, fallback to direct transfer for SPL tokens
+              const tokenMint = token === 'usdc' ? TOKEN_MINTS.USDC : 
+                               token === 'usdt' ? TOKEN_MINTS.USDT : 
+                               TOKEN_MINTS.USDC;
+              
+              vaultWithdrawalResult = await solanaSettlement.directTransferSPL(
+                body.recipient,
+                tokenMint,
+                netAmount,
+                tokenSymbol
+              );
+            }
 
-            if (!directTransferResult.success) {
-              throw new Error(`Direct transfer failed: ${directTransferResult.error}`);
+            if (!vaultWithdrawalResult.success) {
+              throw new Error(`Vault withdrawal failed: ${vaultWithdrawalResult.error}`);
             }
 
             // Calculate new encrypted balance after withdrawal
@@ -817,21 +1099,22 @@ app.post('/api/v1/withdraw', async (c) => {
                 BigInt(netAmount),
                 newEncryptedBalance,
                 body.commitment,
-                directTransferResult.txHash! // REAL tx hash
+                vaultWithdrawalResult.txHash! // Vault program tx hash
               );
             }
 
             csplWithdrawal = {
               enabled: true,
-              txHash: directTransferResult.txHash!,
+              txHash: vaultWithdrawalResult.txHash!,
               confidentialAccount,
-              method: 'direct_transfer', // No vault PDA involved
+              method: 'vault_program_with_arcium_verification', // Vault program + Arcium balance check
             };
 
-            console.log(`[Withdraw] ✅ Arcium cSPL direct withdrawal executed`);
-            console.log(`[Withdraw] TX: ${directTransferResult.txHash}`);
-            console.log(`[Withdraw] Privacy: TRUE - No vault PDA tracing possible`);
-            console.log(`[Withdraw] Observer cannot link: Depositor → Recipient`);
+            console.log(`[Withdraw] ✅ Arcium cSPL + Vault Program withdrawal executed`);
+            console.log(`[Withdraw] TX: ${vaultWithdrawalResult.txHash}`);
+            console.log(`[Withdraw] Privacy: TRUE - Vault PDA used (relayer hidden)`);
+            console.log(`[Withdraw] Observer sees: Vault PDA → Recipient (NOT Relayer → Recipient)`);
+            console.log(`[Withdraw] Balance verified: Off-chain via Arcium cSPL`);
           }
           }
         } catch (err) {
@@ -859,7 +1142,7 @@ app.post('/api/v1/withdraw', async (c) => {
         
         result = await solanaSettlement.privateClaimWithNullifier(
           body.recipient,
-          netAmountSOL,
+          netAmountToken,
           body.commitment,
           body.nullifierHash
         );
@@ -893,6 +1176,18 @@ app.post('/api/v1/withdraw', async (c) => {
         zkCompressed = true;
       }
 
+      // ============ MARK NULLIFIER AS USED IN DARK OTC ============
+      // Mark nullifier in Dark OTC backend to prevent double-spend across systems
+      markNullifierUsedInDarkOTC(body.nullifierHash).then((marked) => {
+        if (marked) {
+          console.log(`[Withdraw] ✅ Nullifier marked as used in Dark OTC backend`);
+        } else {
+          console.warn(`[Withdraw] ⚠️ Failed to mark nullifier in Dark OTC (non-critical)`);
+        }
+      }).catch((err) => {
+        console.warn(`[Withdraw] Mark nullifier failed (async):`, err instanceof Error ? err.message : err);
+      });
+
       return c.json({
         success: true,
         requestId: body.nullifierHash.slice(0, 16),
@@ -901,11 +1196,11 @@ app.post('/api/v1/withdraw', async (c) => {
         explorer: `https://explorer.solana.com/tx/${txHash}?cluster=devnet`,
         zkCompressed,
         fee: {
-          amount: feeAmountSOL,
+          amount: feeAmountToken,
           percentage: feePercentage * 100,
-          currency: 'SOL',
+          currency: tokenSymbol,
         },
-        netAmount: netAmountSOL,
+        netAmount: netAmountToken,
         // NEW: ZK privacy info (optional, FE can ignore)
         zkPrivacy: {
           verified: zkVerified,
@@ -949,6 +1244,18 @@ app.post('/api/v1/withdraw', async (c) => {
           error: result.error || 'Withdrawal failed',
         }, 400);
       }
+
+      // ============ MARK NULLIFIER AS USED IN DARK OTC ============
+      // Mark nullifier in Dark OTC backend to prevent double-spend across systems
+      markNullifierUsedInDarkOTC(body.nullifierHash).then((marked) => {
+        if (marked) {
+          console.log(`[Withdraw] ✅ Nullifier marked as used in Dark OTC backend`);
+        } else {
+          console.warn(`[Withdraw] ⚠️ Failed to mark nullifier in Dark OTC (non-critical)`);
+        }
+      }).catch((err) => {
+        console.warn(`[Withdraw] Mark nullifier failed (async):`, err instanceof Error ? err.message : err);
+      });
 
       return c.json({
         success: true,

@@ -140,6 +140,14 @@ export class BalanceTracker {
   }
 
   /**
+   * Get confidential account by commitment (alias for getAccountBySIPCommitment)
+   * Used by balance query endpoint
+   */
+  getAccountByCommitment(commitment: string): string | null {
+    return this.getAccountBySIPCommitment(commitment);
+  }
+
+  /**
    * Verify withdrawal eligibility (off-chain)
    * 
    * Checks if account has sufficient encrypted balance
@@ -193,8 +201,9 @@ export class BalanceTracker {
     totalDeposits: bigint;
     totalWithdrawals: bigint;
     availableBalance: bigint;
-    depositCount: number;
-    withdrawalCount: number;
+    pendingBalance: bigint;
+    deposits: number;
+    withdrawals: number;
   } | null {
     const balance = this.balances.get(account);
     
@@ -216,8 +225,9 @@ export class BalanceTracker {
       totalDeposits,
       totalWithdrawals,
       availableBalance: totalDeposits - totalWithdrawals,
-      depositCount: balance.deposits.length,
-      withdrawalCount: balance.withdrawals.length,
+      pendingBalance: BigInt(0), // TODO: Track pending withdrawals
+      deposits: balance.deposits.length,
+      withdrawals: balance.withdrawals.length,
     };
   }
 
