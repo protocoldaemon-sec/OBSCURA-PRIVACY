@@ -141,7 +141,33 @@ export function saveDepositNote(note: DepositNote): void {
 export function getDepositNotes(): DepositNote[] {
   try {
     const stored = localStorage.getItem('obscura_deposit_notes')
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return []
+    
+    const notes: DepositNote[] = JSON.parse(stored)
+    
+    // Migration: Add nullifierHash to old notes that don't have it
+    let needsMigration = false
+    const migratedNotes = notes.map(note => {
+      if (!note.nullifierHash && note.nullifier) {
+        // Compute nullifierHash from nullifier
+        const nullifierHash = `0x${simpleHash(note.nullifier)}`
+        needsMigration = true
+        console.log('[Migration] Adding nullifierHash to old deposit note:', {
+          commitment: note.commitment.slice(0, 20) + '...',
+          nullifierHash: nullifierHash.slice(0, 20) + '...'
+        })
+        return { ...note, nullifierHash }
+      }
+      return note
+    })
+    
+    // Save migrated notes back to localStorage
+    if (needsMigration) {
+      localStorage.setItem('obscura_deposit_notes', JSON.stringify(migratedNotes))
+      console.log('[Migration] ✅ Migrated', migratedNotes.length, 'deposit notes')
+    }
+    
+    return migratedNotes
   } catch {
     return []
   }
@@ -301,6 +327,7 @@ export async function submitWithdrawal(data: {
   recipient: string       // Destination address
   amount: string          // Amount to withdraw
   chainId: string         // solana-devnet, sepolia
+  token?: string          // Token type (native, usdc, usdt) - optional for backward compatibility
 }): Promise<{
   success: boolean
   requestId?: string

@@ -1,0 +1,43 @@
+{
+  "name": "obscura-app",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.24.0",
+    "@react-navigation/native": "^7.1.27",
+    "@react-navigation/native-stack": "^7.9.1",
+    "@solana-mobile/mobile-wallet-adapter-protocol": "^2.2.5",
+    "@solana-mobile/mobile-wallet-adapter-protocol-web3js": "^2.2.5",
+    "@solana/web3.js": "^1.98.4",
+    "@walletconnect/modal-react-native": "^1.1.0",
+    "@walletconnect/react-native-compat": "^2.23.1",
+    "bs58": "^6.0.0",
+    "buffer": "^6.0.3",
+    "ethers": "^5.8.0",
+    "expo": "~54.0.31",
+    "expo-build-properties": "^1.0.10",
+    "expo-crypto": "^15.0.8",
+    "expo-linear-gradient": "^15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-get-random-values": "^2.0.0",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "^4.19.0",
+    "react-native-svg": "^15.15.1",
+    "react-native-web": "^0.21.0",
+    "text-encoding": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

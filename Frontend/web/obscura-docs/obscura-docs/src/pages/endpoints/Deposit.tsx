@@ -58,6 +58,14 @@ export default function Deposit() {
         </p>
       </div>
 
+      <div className="mb-8 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+        <p className="text-red-400 font-semibold mb-2">Minimum Deposit Requirement</p>
+        <p className="text-[var(--text-secondary)] text-sm">
+          Minimum deposit: <code className="text-[var(--accent-secondary)]">0.0003 SOL</code> or <code className="text-[var(--accent-secondary)]">0.0003 ETH</code> to cover relayer fees and gas costs.
+          Deposits below this amount will be rejected with error code 400.
+        </p>
+      </div>
+
       <RequestBody fields={fields} />
 
       <section className="mb-8">

@@ -58,6 +58,18 @@ export default function DashboardLayout() {
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [networkError, setNetworkError] = useState<string | null>(null)
   const [showNetworkError, setShowNetworkError] = useState(false)
+  
+  // API Stats State
+  const [apiStats, setApiStats] = useState({
+    healthStatus: 'Connecting...',
+    healthTime: '--',
+    solanaConfigured: false,
+    evmConfigured: false,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    pendingRequests: 0,
+    apiVersion: '--'
+  })
 
   // Determine active wallet - use preferred if set, otherwise check what's connected
   const activeWallet: WalletType = preferredWallet 
@@ -183,10 +195,40 @@ export default function DashboardLayout() {
 
   const refreshDashboard = async () => {
     try {
-      const [info, health, batches] = await Promise.all([fetchInfo(), fetchHealth(), fetchBatches()])
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      
+      // Fetch all API endpoints in parallel
+      const [healthRes, infoRes, solanaRes, evmRes, relayerRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/health`).catch(() => null),
+        fetch(`${BACKEND_URL}/`).catch(() => null),
+        fetch(`${BACKEND_URL}/api/v1/solana/status`).catch(() => null),
+        fetch(`${BACKEND_URL}/api/v1/evm/status`).catch(() => null),
+        fetch(`${BACKEND_URL}/api/v1/relayer/stats`).catch(() => null)
+      ])
+      
+      // Parse responses
+      const health = healthRes?.ok ? await healthRes.json() : null
+      const info = infoRes?.ok ? await infoRes.json() : null
+      const solana = solanaRes?.ok ? await solanaRes.json() : null
+      const evm = evmRes?.ok ? await evmRes.json() : null
+      const relayer = relayerRes?.ok ? await relayerRes.json() : null
+      
+      // Update stats
+      setApiStats({
+        healthStatus: health?.status === 'healthy' ? 'Online' : 'Offline',
+        healthTime: health?.timestamp ? new Date(health.timestamp).toLocaleTimeString() : '--',
+        solanaConfigured: solana?.configured || false,
+        evmConfigured: evm?.configured || false,
+        totalDeposits: relayer?.totalDeposits || 0,
+        totalWithdrawals: relayer?.totalWithdrawals || 0,
+        pendingRequests: relayer?.pendingRequests || 0,
+        apiVersion: info?.version || '--'
+      })
+      
       setServerStatus('Server Online')
       setIsServerConnected(true)
-    } catch {
+    } catch (error) {
+      console.error('[Dashboard] Failed to fetch stats:', error)
       setServerStatus('Server Offline')
       setIsServerConnected(false)
     }
@@ -354,6 +396,65 @@ export default function DashboardLayout() {
               ))}
             </nav>
 
+            {/* Mobile Vault Balance - Always visible on mobile */}
+            {activeWallet && (() => {
+              const stored = typeof window !== 'undefined' ? localStorage.getItem('obscura_deposit_notes') : null
+              const depositNotes = stored ? JSON.parse(stored) : []
+              
+              const TOKEN_DECIMALS: Record<string, number> = {
+                'native': 9,
+                'usdc': 6,
+                'usdt': 6
+              }
+              
+              const vaultBalances: Record<string, number> = {}
+              depositNotes.forEach((note: any) => {
+                const token = note.token || 'native'
+                const decimals = TOKEN_DECIMALS[token] || 9
+                const amount = Number(note.amount) / Math.pow(10, decimals)
+                vaultBalances[token] = (vaultBalances[token] || 0) + amount
+              })
+              
+              const hasDeposit = Object.keys(vaultBalances).length > 0
+              
+              return (
+                <div className="md:hidden flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-[#1a1a24] border-[#2a2a3a]">
+                  <svg className={`w-3 h-3 ${hasDeposit ? 'text-green-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  {hasDeposit ? (
+                    <div className="flex items-center gap-1.5">
+                      {vaultBalances['native'] && (
+                        <div className="flex items-center gap-0.5">
+                          <img src={(() => {
+                            const nativeNote = depositNotes.find((n: any) => (n.token || 'native') === 'native')
+                            if (nativeNote?.chainId?.includes('solana')) return TOKEN_LOGOS.SOL
+                            if (nativeNote?.chainId?.includes('sepolia') || nativeNote?.chainId?.includes('ethereum')) return TOKEN_LOGOS.ETH
+                            return activeWallet === 'solana' ? TOKEN_LOGOS.SOL : TOKEN_LOGOS.ETH
+                          })()} alt="" className="w-3 h-3 rounded-full" />
+                          <span className="text-[10px] font-medium text-green-400">{vaultBalances['native'].toFixed(2)}</span>
+                        </div>
+                      )}
+                      {vaultBalances['usdc'] && (
+                        <div className="flex items-center gap-0.5">
+                          <img src={TOKEN_LOGOS.USDC} alt="USDC" className="w-3 h-3 rounded-full" />
+                          <span className="text-[10px] font-medium text-green-400">{vaultBalances['usdc'].toFixed(2)}</span>
+                        </div>
+                      )}
+                      {vaultBalances['usdt'] && (
+                        <div className="flex items-center gap-0.5">
+                          <img src={TOKEN_LOGOS.USDT} alt="USDT" className="w-3 h-3 rounded-full" />
+                          <span className="text-[10px] font-medium text-green-400">{vaultBalances['usdt'].toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-medium text-gray-400">No Vault</span>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Right side - Desktop */}
             <div className="hidden md:flex items-center gap-3">
               {/* Multi-Token Balance - only show if wallet connected */}
@@ -447,19 +548,37 @@ export default function DashboardLayout() {
                         <div className="flex items-center gap-2 mt-0.5">
                           {vaultBalances['native'] && (
                             <div className="flex items-center gap-1">
-                              <img src={activeWallet === 'solana' ? TOKEN_LOGOS.SOL : TOKEN_LOGOS.ETH} alt="" className="w-3 h-3 rounded-full" />
+                              <img src={(() => {
+                                // Determine logo based on deposit notes chainId
+                                const depositNotes = (() => {
+                                  try {
+                                    const stored = localStorage.getItem('obscura_deposit_notes')
+                                    return stored ? JSON.parse(stored) : []
+                                  } catch {
+                                    return []
+                                  }
+                                })()
+                                const nativeNote = depositNotes.find((n: any) => (n.token || 'native') === 'native')
+                                if (nativeNote?.chainId?.includes('solana')) {
+                                  return TOKEN_LOGOS.SOL
+                                } else if (nativeNote?.chainId?.includes('sepolia') || nativeNote?.chainId?.includes('ethereum')) {
+                                  return TOKEN_LOGOS.ETH
+                                }
+                                // Fallback to active wallet
+                                return activeWallet === 'solana' ? TOKEN_LOGOS.SOL : TOKEN_LOGOS.ETH
+                              })()} alt="" className="w-3 h-3 rounded-full" />
                               <span className="text-xs font-medium text-green-400">{vaultBalances['native'].toFixed(4)}</span>
                             </div>
                           )}
                           {vaultBalances['usdc'] && (
                             <div className="flex items-center gap-1">
-                              <img src={TOKEN_LOGOS.USDC} alt="" className="w-3 h-3 rounded-full" />
+                              <img src={TOKEN_LOGOS.USDC} alt="USDC" className="w-3 h-3 rounded-full" />
                               <span className="text-xs font-medium text-green-400">{vaultBalances['usdc'].toFixed(2)}</span>
                             </div>
                           )}
                           {vaultBalances['usdt'] && (
                             <div className="flex items-center gap-1">
-                              <img src={TOKEN_LOGOS.USDT} alt="" className="w-3 h-3 rounded-full" />
+                              <img src={TOKEN_LOGOS.USDT} alt="USDT" className="w-3 h-3 rounded-full" />
                               <span className="text-xs font-medium text-green-400">{vaultBalances['usdt'].toFixed(2)}</span>
                             </div>
                           )}
@@ -529,6 +648,50 @@ export default function DashboardLayout() {
                             </div>
                             <button onClick={handleDisconnect} className="text-xs text-red-400 hover:text-red-300">Disconnect</button>
                           </div>
+                          
+                          {/* Faucet Links - Desktop */}
+                          {activeWallet === 'solana' && (
+                            <>
+                              <div className="px-3 pt-2 pb-1 border-t border-[#2a2a3a]">
+                                <p className="text-xs text-gray-500 uppercase flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Get Devnet Tokens
+                                </p>
+                              </div>
+                              <div className="px-3 pb-3 space-y-1">
+                                <a
+                                  href="https://faucet.solana.com"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-between p-2 bg-[#0d0d12] rounded-lg hover:bg-[#252530] transition-colors group"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <img src={TOKEN_LOGOS.SOL} alt="SOL" className="w-4 h-4 rounded-full" />
+                                    <span className="text-xs text-gray-300">SOL Faucet</span>
+                                  </div>
+                                  <svg className="w-3 h-3 text-gray-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                                <a
+                                  href="https://spl-token-faucet.com/?token-name=USDC-Dev"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-between p-2 bg-[#0d0d12] rounded-lg hover:bg-[#252530] transition-colors group"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <img src={TOKEN_LOGOS.USDC} alt="USDC" className="w-4 h-4 rounded-full" />
+                                    <span className="text-xs text-gray-300">USDC Faucet</span>
+                                  </div>
+                                  <svg className="w-3 h-3 text-gray-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                              </div>
+                            </>
+                          )}
                         </>
                       ) : (
                         <>
@@ -635,67 +798,49 @@ export default function DashboardLayout() {
                   </div>
                 )}
 
-                {/* Vault Balance - Mobile */}
-                {activeWallet && (() => {
-                  const stored = typeof window !== 'undefined' ? localStorage.getItem('obscura_deposit_notes') : null
-                  const depositNotes = stored ? JSON.parse(stored) : []
-                  
-                  const TOKEN_DECIMALS: Record<string, number> = {
-                    'native': 9,
-                    'usdc': 6,
-                    'usdt': 6
-                  }
-                  
-                  const vaultBalances: Record<string, number> = {}
-                  depositNotes.forEach((note: any) => {
-                    const token = note.token || 'native'
-                    const decimals = TOKEN_DECIMALS[token] || 9
-                    const amount = Number(note.amount) / Math.pow(10, decimals)
-                    vaultBalances[token] = (vaultBalances[token] || 0) + amount
-                  })
-                  
-                  const hasDeposit = Object.keys(vaultBalances).length > 0
-                  
-                  return (
-                    <div className="px-4 pb-2">
-                      <div className={`p-3 rounded-lg border ${hasDeposit ? 'bg-green-500/10 border-green-500/30' : 'bg-gray-500/10 border-gray-500/30'}`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <svg className={`w-4 h-4 ${hasDeposit ? 'text-green-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          <span className="text-xs font-medium text-white">Vault Balance</span>
-                          {hasDeposit && (
-                            <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded ml-auto">Ready</span>
-                          )}
-                        </div>
-                        {hasDeposit ? (
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {vaultBalances['native'] && (
-                              <div className="flex items-center gap-1">
-                                <img src={TOKEN_LOGOS.SOL} alt="" className="w-3 h-3 rounded-full" />
-                                <span className="font-medium text-green-400">{vaultBalances['native'].toFixed(4)} SOL</span>
-                              </div>
-                            )}
-                            {vaultBalances['usdc'] && (
-                              <div className="flex items-center gap-1">
-                                <img src={TOKEN_LOGOS.USDC} alt="" className="w-3 h-3 rounded-full" />
-                                <span className="font-medium text-green-400">{vaultBalances['usdc'].toFixed(2)} USDC</span>
-                              </div>
-                            )}
-                            {vaultBalances['usdt'] && (
-                              <div className="flex items-center gap-1">
-                                <img src={TOKEN_LOGOS.USDT} alt="" className="w-3 h-3 rounded-full" />
-                                <span className="font-medium text-green-400">{vaultBalances['usdt'].toFixed(2)} USDT</span>
-                              </div>
-                            )}
+                {/* Faucet Links - Mobile */}
+                {activeWallet === 'solana' && solanaConnected && (
+                  <div className="px-4 pb-2">
+                    <div className="p-3 rounded-lg border bg-blue-500/10 border-blue-500/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-xs font-medium text-white">Get Devnet Tokens</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <a
+                          href="https://faucet.solana.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-2 bg-[#1a1a24] rounded-lg hover:bg-[#2a2a3a] transition-colors group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src={TOKEN_LOGOS.SOL} alt="SOL" className="w-4 h-4 rounded-full" />
+                            <span className="text-xs text-gray-300">SOL Faucet</span>
                           </div>
-                        ) : (
-                          <span className="text-xs font-medium text-gray-400">No Deposit</span>
-                        )}
+                          <svg className="w-3 h-3 text-gray-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        <a
+                          href="https://spl-token-faucet.com/?token-name=USDC-Dev"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-2 bg-[#1a1a24] rounded-lg hover:bg-[#2a2a3a] transition-colors group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src={TOKEN_LOGOS.USDC} alt="USDC" className="w-4 h-4 rounded-full" />
+                            <span className="text-xs text-gray-300">USDC Faucet</span>
+                          </div>
+                          <svg className="w-3 h-3 text-gray-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
                     </div>
-                  )
-                })()}
+                  </div>
+                )}
 
                 <div className="pt-4 mt-2 border-t border-[#2a2a3a] px-4">
                   {activeWallet ? (
@@ -728,9 +873,21 @@ export default function DashboardLayout() {
       <main className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-10">
         {activeSection === 'dashboard' && (
           <DashboardSection 
-            stats={{ healthStatus: isServerConnected ? 'Online' : 'Offline', healthTime: new Date().toLocaleTimeString(), batchCount: 0, poolCount: 0, apiVersion: '0.4.0', walletBalance: currentBalance, tokenType: activeWallet === 'solana' ? 'SOL' : activeWallet === 'evm' ? 'ETH' : null }} 
+            stats={{ 
+              healthStatus: apiStats.healthStatus,
+              healthTime: apiStats.healthTime,
+              solanaConfigured: apiStats.solanaConfigured,
+              evmConfigured: apiStats.evmConfigured,
+              totalDeposits: apiStats.totalDeposits,
+              totalWithdrawals: apiStats.totalWithdrawals,
+              pendingRequests: apiStats.pendingRequests,
+              apiVersion: apiStats.apiVersion,
+              walletBalance: currentBalance, 
+              tokenType: activeWallet === 'solana' ? 'SOL' : activeWallet === 'evm' ? 'ETH' : null
+            }} 
             activityLog={activityLog} 
-            onRefresh={refreshDashboard} 
+            onRefresh={refreshDashboard}
+            onNavigate={setActiveSection}
           />
         )}
         {activeSection === 'deposit' && (

@@ -334,6 +334,10 @@ const SubmitQuoteSchema = z.object({
   expirationTime: FutureTimestampSchema,
   signature: WOTSSignatureSchema,
   publicKey: WOTSPublicKeySchema,
+  walletAddress: z.string().min(32, 'Wallet address must be valid Solana address'),
+  commitment: z.string().optional(), // Market maker's deposit commitment for settlement
+  nullifierHash: z.string().optional(), // Market maker's nullifier hash from deposit note
+  chainId: z.enum(['solana-devnet', 'sepolia']).optional(),
 });
 
 /**
@@ -342,7 +346,12 @@ const SubmitQuoteSchema = z.object({
 const AcceptQuoteSchema = z.object({
   signature: WOTSSignatureSchema,
   publicKey: WOTSPublicKeySchema,
-  commitment: z.string(),
+  takerCommitment: z.string().optional(),
+  takerAddress: z.string().min(32).optional(), // Wallet address (base58 for Solana, hex for EVM)
+  takerNullifierHash: z.string().optional(), // Nullifier hash extracted from taker's deposit note
+  marketMakerCommitment: z.string().optional(),
+  marketMakerNullifierHash: z.string().optional(), // Nullifier hash extracted from market maker's deposit note
+  chainId: z.enum(['solana-devnet', 'sepolia']).optional(),
 });
 
 /**
@@ -440,8 +449,23 @@ router.get('/quote-request/:id/quotes', async (req: Request, res: Response) => {
     // Get quotes
     const quotes = await rfqService.getQuotesByRequestId(quoteRequestId);
     
+    // Transform response to use clear field names
+    // price_commitment field contains PLAINTEXT price (not hash)
+    const transformedQuotes = quotes.map((quote: any) => ({
+      quoteId: quote.id,
+      price: quote.price_commitment, // PLAINTEXT price (e.g., "150000000")
+      priceCommitment: quote.price_commitment, // Backward compatibility
+      marketMakerPublicKey: quote.market_maker_public_key,
+      marketMakerAddress: quote.market_maker_address,
+      marketMakerCommitment: quote.market_maker_commitment,
+      marketMakerNullifierHash: quote.market_maker_nullifier_hash,
+      expiresAt: quote.expires_at,
+      status: quote.status,
+      createdAt: quote.created_at,
+    }));
+    
     // Return success response
-    const successResponse = buildSuccessResponse({ quotes });
+    const successResponse = buildSuccessResponse({ quotes: transformedQuotes });
     return res.status(200).json(successResponse);
     
   } catch (error) {
@@ -494,14 +518,19 @@ router.post('/quote/:id/accept', async (req: Request, res: Response) => {
       return res.status(getHttpStatusForErrorCode(ErrorCode.VALIDATION_ERROR)).json(errorResponse);
     }
     
-    const { signature, publicKey, commitment } = validationResult.data;
+    const { signature, publicKey, takerCommitment, takerAddress, takerNullifierHash, marketMakerCommitment, marketMakerNullifierHash, chainId } = validationResult.data;
     
     // Accept quote
     const result = await rfqService.acceptQuote({
       quoteId,
       signature,
       publicKey,
-      commitment,
+      takerCommitment,
+      takerAddress,
+      takerNullifierHash,
+      marketMakerCommitment,
+      marketMakerNullifierHash,
+      chainId,
     });
     
     // Return success response
@@ -654,5 +683,176 @@ router.get('/quote-request/:id/messages', async (req: Request, res: Response) =>
     
     const errorResponse = buildErrorResponse(errorCode, errorMessage);
     return res.status(getHttpStatusForErrorCode(errorCode)).json(errorResponse);
+  }
+});
+
+/**
+ * GET /api/v1/rfq/used-nullifiers
+ * 
+ * Get all used nullifiers for deposit note cleanup.
+ * Frontend uses this to auto-clean deposit notes that have been used in settlements.
+ */
+router.get('/used-nullifiers', async (_req: Request, res: Response) => {
+  try {
+    // Get all used nullifiers from database
+    const { data: nullifiers, error } = await supabaseConfig.adminClient
+      .from('used_nullifiers')
+      .select('nullifier_hash')
+      .in('status', ['pending', 'settled']); // Include both pending and settled
+    
+    if (error) {
+      throw new Error(`Failed to fetch used nullifiers: ${error.message}`);
+    }
+    
+    // Extract nullifier hashes
+    const usedNullifiers = (nullifiers || []).map((n: any) => n.nullifier_hash);
+    
+    // Return success response
+    const successResponse = buildSuccessResponse({ usedNullifiers });
+    return res.status(200).json(successResponse);
+    
+  } catch (error) {
+    console.error('[RFQ Routes] Get used nullifiers error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorResponse = buildErrorResponse(ErrorCode.INTERNAL_ERROR, errorMessage);
+    return res.status(getHttpStatusForErrorCode(ErrorCode.INTERNAL_ERROR)).json(errorResponse);
+  }
+});
+
+/**
+ * GET /api/v1/rfq/check-nullifier/:nullifierHash
+ * 
+ * Check if a specific nullifier has been used.
+ * Frontend uses this before withdraw to prevent withdrawing deposits used in settlements.
+ */
+router.get('/check-nullifier/:nullifierHash', async (req: Request, res: Response) => {
+  try {
+    const { nullifierHash } = req.params;
+    
+    // Check if nullifier exists in database
+    const { data: nullifier, error } = await supabaseConfig.adminClient
+      .from('used_nullifiers')
+      .select('*')
+      .eq('nullifier_hash', nullifierHash)
+      .maybeSingle();
+    
+    if (error) {
+      throw new Error(`Failed to check nullifier: ${error.message}`);
+    }
+    
+    // Return result
+    if (nullifier) {
+      const successResponse = buildSuccessResponse({
+        isUsed: true,
+        quoteId: nullifier.quote_id,
+        entityType: nullifier.entity_type,
+        status: nullifier.status,
+        usedAt: nullifier.used_at,
+      });
+      return res.status(200).json(successResponse);
+    } else {
+      const successResponse = buildSuccessResponse({
+        isUsed: false,
+      });
+      return res.status(200).json(successResponse);
+    }
+    
+  } catch (error) {
+    console.error('[RFQ Routes] Check nullifier error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorResponse = buildErrorResponse(ErrorCode.INTERNAL_ERROR, errorMessage);
+    return res.status(getHttpStatusForErrorCode(ErrorCode.INTERNAL_ERROR)).json(errorResponse);
+  }
+});
+
+/**
+ * POST /api/v1/rfq/mark-nullifier-used
+ * 
+ * Mark a nullifier as used (admin only).
+ * Requires ADMIN_API_KEY in Authorization header.
+ * Used by internal services to manually mark nullifiers as used.
+ */
+router.post('/mark-nullifier-used', async (req: Request, res: Response) => {
+  try {
+    // Check admin API key
+    const apiKey = req.headers.authorization?.replace('Bearer ', '');
+    const { config } = await import('../config');
+    
+    if (!apiKey || apiKey !== config.admin.apiKey) {
+      const errorResponse = buildErrorResponse(
+        ErrorCode.NOT_AUTHORIZED,
+        'Invalid or missing admin API key'
+      );
+      return res.status(getHttpStatusForErrorCode(ErrorCode.NOT_AUTHORIZED)).json(errorResponse);
+    }
+    
+    // Validate request body
+    const { nullifierHash, quoteId, entityType, status } = req.body;
+    
+    if (!nullifierHash || typeof nullifierHash !== 'string') {
+      const errorResponse = buildErrorResponse(
+        ErrorCode.VALIDATION_ERROR,
+        'nullifierHash is required and must be a string'
+      );
+      return res.status(getHttpStatusForErrorCode(ErrorCode.VALIDATION_ERROR)).json(errorResponse);
+    }
+    
+    // Optional fields with defaults
+    const finalQuoteId = quoteId || null;
+    const finalEntityType = entityType || 'manual';
+    const finalStatus = status || 'settled';
+    
+    // Check if nullifier already exists
+    const { data: existing } = await supabaseConfig.adminClient
+      .from('used_nullifiers')
+      .select('*')
+      .eq('nullifier_hash', nullifierHash)
+      .maybeSingle();
+    
+    if (existing) {
+      const errorResponse = buildErrorResponse(
+        ErrorCode.VALIDATION_ERROR,
+        'Nullifier already marked as used',
+        undefined,
+        {
+          existingQuoteId: existing.quote_id,
+          existingStatus: existing.status,
+          existingEntityType: existing.entity_type,
+        }
+      );
+      return res.status(getHttpStatusForErrorCode(ErrorCode.VALIDATION_ERROR)).json(errorResponse);
+    }
+    
+    // Insert nullifier (used_at will use DEFAULT NOW() from database)
+    const { error: insertError } = await supabaseConfig.adminClient
+      .from('used_nullifiers')
+      .insert({
+        nullifier_hash: nullifierHash,
+        quote_id: finalQuoteId,
+        entity_type: finalEntityType,
+        status: finalStatus,
+      });
+    
+    if (insertError) {
+      throw new Error(`Failed to mark nullifier as used: ${insertError.message}`);
+    }
+    
+    // Return success
+    const successResponse = buildSuccessResponse({
+      nullifierHash,
+      quoteId: finalQuoteId,
+      entityType: finalEntityType,
+      status: finalStatus,
+    });
+    return res.status(201).json(successResponse);
+    
+  } catch (error) {
+    console.error('[RFQ Routes] Mark nullifier used error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorResponse = buildErrorResponse(ErrorCode.INTERNAL_ERROR, errorMessage);
+    return res.status(getHttpStatusForErrorCode(ErrorCode.INTERNAL_ERROR)).json(errorResponse);
   }
 });

@@ -11,3 +11,4 @@ export { SettlementService, settlementService } from './settlement.service';
 export { WhitelistService, whitelistService } from './whitelist.service';
 export { MessageService, messageService } from './message.service';
 export { RFQService, rfqService } from './rfq.service';
+export { NullifierTrackingService, nullifierTrackingService } from './nullifier-tracking.service';

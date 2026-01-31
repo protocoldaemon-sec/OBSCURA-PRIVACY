@@ -196,6 +196,97 @@ export class SolanaSettlementService {
   }
 
   /**
+   * Direct SPL token transfer from relayer to recipient (NO VAULT PDA)
+   * Supports USDC, USDT, and other SPL tokens
+   * @param recipient - Recipient wallet address
+   * @param tokenMint - SPL token mint address
+   * @param amountRaw - Amount in raw token units (e.g., 10000000 for 10 USDC)
+   * @param tokenSymbol - Token symbol for logging (e.g., "USDC")
+   * @returns Transfer result with real transaction hash
+   */
+  async directTransferSPL(
+    recipient: string,
+    tokenMint: string,
+    amountRaw: number,
+    tokenSymbol: string = 'SPL'
+  ): Promise<TransferResult> {
+    try {
+      const { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction } = await import('@solana/spl-token');
+      
+      console.log(`[SolanaSettlement] Executing direct SPL transfer (NO VAULT PDA)`);
+      console.log(`[SolanaSettlement] From: ${this.payer.publicKey.toBase58()}`);
+      console.log(`[SolanaSettlement] To: ${recipient}`);
+      console.log(`[SolanaSettlement] Token: ${tokenSymbol}`);
+      console.log(`[SolanaSettlement] Amount (raw): ${amountRaw}`);
+
+      const recipientPubkey = new PublicKey(recipient);
+      const mintPubkey = new PublicKey(tokenMint);
+
+      // Get associated token accounts
+      const fromATA = await getAssociatedTokenAddress(
+        mintPubkey,
+        this.payer.publicKey
+      );
+      
+      const toATA = await getAssociatedTokenAddress(
+        mintPubkey,
+        recipientPubkey
+      );
+
+      const transaction = new Transaction();
+
+      // Check if recipient ATA exists, if not create it
+      const toAccountInfo = await this.connection.getAccountInfo(toATA);
+      if (!toAccountInfo) {
+        console.log(`[SolanaSettlement] Creating ATA for recipient...`);
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            this.payer.publicKey, // payer
+            toATA, // associated token account
+            recipientPubkey, // owner
+            mintPubkey // mint
+          )
+        );
+      }
+
+      // Add transfer instruction
+      transaction.add(
+        createTransferInstruction(
+          fromATA, // source
+          toATA, // destination
+          this.payer.publicKey, // owner
+          amountRaw // amount in raw units
+        )
+      );
+
+      // Send and confirm transaction
+      const signature = await sendAndConfirmTransaction(
+        this.connection,
+        transaction,
+        [this.payer],
+        {
+          commitment: 'confirmed',
+          preflightCommitment: 'confirmed',
+        }
+      );
+
+      console.log(`[SolanaSettlement] ✅ Direct SPL transfer successful: ${signature}`);
+      console.log(`[SolanaSettlement] Privacy: TRUE - No vault PDA involved`);
+
+      return {
+        success: true,
+        txHash: signature,
+      };
+    } catch (error) {
+      console.error(`[SolanaSettlement] Direct SPL transfer failed:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Compute deposit commitment (matches whitepaper)
    * Format: sha256("SIP_DEPOSIT" || depositor || amount || token || nonce || timestamp)
    */

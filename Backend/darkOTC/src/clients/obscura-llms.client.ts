@@ -57,6 +57,7 @@ export interface WithdrawParams {
   nullifierHash: string;
   recipient: string;
   amount: string;
+  token?: string; // Token to withdraw (e.g., 'native', 'USDC', 'USDT')
   chainId: 'solana-devnet' | 'sepolia';
 }
 

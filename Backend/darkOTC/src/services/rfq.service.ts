@@ -20,6 +20,7 @@ import { balanceService } from './balance.service';
 import { signatureService } from './signature.service';
 import { whitelistService } from './whitelist.service';
 import { settlementService } from './settlement.service';
+import { nullifierTrackingService } from './nullifier-tracking.service';
 import { supabaseConfig } from '../config/supabase.config';
 import {
   ValidationError,
@@ -103,7 +104,9 @@ export interface SubmitQuoteParams {
   expirationTime: Timestamp;
   signature: WOTSSignature;
   publicKey: WOTSPublicKey;
-  commitment?: string; // Optional: Market maker's deposit commitment for balance verification
+  walletAddress: string; // Solana wallet address for settlement
+  commitment?: string; // Optional: Market maker's deposit commitment for balance verification AND settlement
+  nullifierHash?: string; // Optional: Market maker's nullifier hash from deposit note (for settlement)
   chainId?: 'solana-devnet' | 'sepolia'; // Optional: Chain for balance verification
 }
 
@@ -124,6 +127,9 @@ export interface QuoteData {
   quote_request_id: string;
   price_commitment: string;
   market_maker_public_key: string;
+  market_maker_address: string; // Solana wallet address for settlement
+  market_maker_commitment?: string; // Market maker's deposit commitment for settlement
+  market_maker_nullifier_hash?: string; // Market maker's nullifier hash from deposit note
   created_at: number;
   expires_at: number;
   status: string;
@@ -137,7 +143,11 @@ export interface AcceptQuoteParams {
   signature: WOTSSignature;
   publicKey: WOTSPublicKey;
   chainId?: 'solana-devnet' | 'sepolia'; // Optional: Chain for settlement
-  commitment?: string; // Optional: Taker's deposit commitment for settlement
+  takerCommitment?: string; // Optional: Taker's deposit commitment (for payment)
+  takerAddress?: string; // Optional: Taker's wallet address (to receive asset)
+  takerNullifierHash?: string; // Optional: Nullifier hash extracted from taker's deposit note
+  marketMakerCommitment?: string; // Optional: Market maker's deposit commitment (for asset)
+  marketMakerNullifierHash?: string; // Optional: Nullifier hash extracted from market maker's deposit note
 }
 
 /**
@@ -515,7 +525,9 @@ export class RFQService {
       expirationTime,
       signature,
       publicKey,
+      walletAddress,
       commitment,
+      nullifierHash,
       chainId,
     } = params;
 
@@ -566,6 +578,28 @@ export class RFQService {
       throw new Error('Signature has already been used');
     }
 
+    // CRITICAL SECURITY: Validate nullifier and commitment not already used
+    // This prevents double-spend attacks via API bypass (curl/Postman)
+    // NOTE: Validation only - actual tracking is handled by Obscura-LLMS backend
+    if (nullifierHash) {
+      const nullifierCheck = await nullifierTrackingService.checkNullifierUsed(nullifierHash);
+      if (nullifierCheck.isUsed) {
+        throw new Error(
+          `Nullifier already used for quote ${nullifierCheck.usedForQuoteId} ` +
+          `(status: ${nullifierCheck.status}, entity: ${nullifierCheck.entityType})`
+        );
+      }
+    }
+
+    if (commitment) {
+      const commitmentCheck = await nullifierTrackingService.checkCommitmentUsed(commitment);
+      if (commitmentCheck.isUsed) {
+        throw new Error(
+          `Commitment already used for active quote ${commitmentCheck.existingQuoteId}`
+        );
+      }
+    }
+
     // NO COMMITMENT for price - Store as plaintext for fair trading
     // Privacy maintained through stealth addresses and ZK settlement
     
@@ -599,6 +633,9 @@ export class RFQService {
       quote_request_id: quoteRequestId,
       price_commitment: price, // Store price as plaintext (no commitment)
       market_maker_public_key: publicKey,
+      market_maker_address: walletAddress, // Store wallet address for settlement
+      market_maker_commitment: commitment, // Store commitment for settlement
+      market_maker_nullifier_hash: nullifierHash, // Store nullifier hash for settlement
       created_at: now,
       expires_at: expirationTime,
       status: QuoteStatus.ACTIVE,
@@ -611,6 +648,9 @@ export class RFQService {
     if (insertError) {
       throw new Error(`Failed to store quote: ${insertError.message}`);
     }
+
+    // NOTE: Nullifier tracking is now handled by Obscura-LLMS backend
+    // Dark OTC only validates, does not save
 
     // Mark signature as used
     await signatureService.markSignatureUsed(signature, 'submit_quote', publicKey);
@@ -856,7 +896,7 @@ export class RFQService {
    * @returns Quote acceptance response with nullifier and settlement details
    */
   async acceptQuote(params: AcceptQuoteParams): Promise<AcceptQuoteResponse> {
-    const { quoteId, signature, publicKey, chainId, commitment } = params;
+    const { quoteId, signature, publicKey, chainId, takerCommitment, takerAddress, takerNullifierHash, marketMakerCommitment, marketMakerNullifierHash } = params;
 
     // Get quote first
     const quote = await this.getQuote(quoteId);
@@ -935,19 +975,138 @@ export class RFQService {
       throw new Error('Signature has already been used');
     }
 
+    // CRITICAL SECURITY: Validate taker nullifier not already used
+    // This prevents double-spend attacks via API bypass
+    if (takerNullifierHash) {
+      const takerNullifierCheck = await nullifierTrackingService.checkNullifierUsed(takerNullifierHash);
+      if (takerNullifierCheck.isUsed) {
+        throw new Error(
+          `Taker nullifier already used for quote ${takerNullifierCheck.usedForQuoteId} ` +
+          `(status: ${takerNullifierCheck.status})`
+        );
+      }
+    }
+
     // Requirement 3.4: Generate nullifier to prevent double-acceptance
     const nullifierData = privacyService.generateNullifier();
 
     // Requirement 3.6: Execute settlement via Obscura-LLMS (atomic balance updates)
     let settlementResult;
-    if (commitment && chainId) {
+    if (takerCommitment && takerAddress && chainId) {
       try {
+        // Get market maker commitment from quote
+        const mmCommitment = marketMakerCommitment || quote.market_maker_commitment;
+        
+        if (!mmCommitment) {
+          throw new Error(
+            'Market maker commitment not found. Market maker must provide commitment when submitting quote.'
+          );
+        }
+        
+        // CRITICAL: Validate nullifier hashes are provided
+        if (!takerNullifierHash) {
+          throw new Error(
+            'Taker nullifier hash is required. Frontend must extract nullifierHash from deposit note.'
+          );
+        }
+        
+        // Get market maker nullifier hash from request or quote
+        const mmNullifierHash = marketMakerNullifierHash || quote.market_maker_nullifier_hash;
+        
+        if (!mmNullifierHash) {
+          throw new Error(
+            'Market maker nullifier hash is required. Market maker must provide nullifierHash when submitting quote, or taker must provide it when accepting.'
+          );
+        }
+        
+        // Parse asset pair to determine tokens
+        const [baseToken, quoteToken] = quoteRequest.asset_pair.split('/'); // e.g., "SOL/USDC"
+        
+        // Calculate payment amount
+        // Price is per base token unit (e.g., 150 USDC per 1 SOL)
+        // Both assetAmount and pricePerUnit are in base units (lamports, micro-USDC)
+        // Formula: paymentAmount = (assetAmount × pricePerUnit) / baseTokenDecimals
+        
+        const assetAmount = BigInt(quoteRequest.amount_commitment);
+        const pricePerUnit = BigInt(quote.price_commitment);
+        
+        // CRITICAL: Frontend sends ALL values in 9 decimals (1e9)
+        // CRITICAL: Price is TOTAL price in quote token, NOT per unit!
+        // Example: BUY 2 SOL, quote 300 USDC
+        //   amount = 2,000,000,000 (2 SOL in 9 decimals)
+        //   price = 300,000,000 (300 USDC TOTAL in 6 decimals)
+        //   Settlement: Taker pays 300 USDC, receives 2 SOL
+        
+        // NO CALCULATION NEEDED - price is already the total!
+        const totalQuoteToken = pricePerUnit;
+        
+        // Determine settlement amounts based on direction
+        let assetAmountFinal: string;
+        let paymentAmountFinal: string;
+        let assetToken: string;
+        let paymentToken: string;
+        
+        if (quoteRequest.direction === 'buy') {
+          // Taker BUYS base token, PAYS quote token
+          // - Taker pays: price (total in quote token)
+          // - Taker receives: amount (in base token)
+          paymentToken = quoteToken;
+          paymentAmountFinal = totalQuoteToken.toString();
+          assetToken = baseToken;
+          assetAmountFinal = assetAmount.toString();
+        } else {
+          // Taker SELLS base token, RECEIVES quote token
+          // - Taker pays: amount (in base token)
+          // - Taker receives: price (total in quote token)
+          paymentToken = baseToken;
+          paymentAmountFinal = assetAmount.toString();
+          assetToken = quoteToken;
+          assetAmountFinal = totalQuoteToken.toString();
+        }
+        
+        console.log(
+          `[RFQService] Settlement amount calculation:` +
+          `\n  Request amount: ${assetAmount} (${quoteRequest.amount_commitment})` +
+          `\n  Quote price per unit: ${pricePerUnit} (${quote.price_commitment})` +
+          `\n  Direction: ${quoteRequest.direction}` +
+          `\n  Base token: ${baseToken}` +
+          `\n  Quote token: ${quoteToken}` +
+          `\n  Total quote token: ${totalQuoteToken}`
+        );
+        
+        // Map token names to Obscura-LLMS format
+        // SOL/ETH → 'native', USDC/USDT → lowercase
+        const mapTokenToObscuraFormat = (token: string): string => {
+          if (token === 'SOL' || token === 'ETH') return 'native';
+          return token.toLowerCase(); // usdc, usdt, etc.
+        };
+        
+        const assetTokenFormatted = mapTokenToObscuraFormat(assetToken);
+        const paymentTokenFormatted = mapTokenToObscuraFormat(paymentToken);
+        
+        console.log(
+          `[RFQService] Executing atomic swap:` +
+          `\n  Direction: ${quoteRequest.direction}` +
+          `\n  Taker pays: ${paymentAmountFinal} ${paymentToken} (${paymentTokenFormatted})` +
+          `\n  Taker receives: ${assetAmountFinal} ${assetToken} (${assetTokenFormatted})` +
+          `\n  Market Maker receives: ${paymentAmountFinal} ${paymentToken} (${paymentTokenFormatted})` +
+          `\n  Market Maker sends: ${assetAmountFinal} ${assetToken} (${assetTokenFormatted})` +
+          `\n  Taker nullifier: ${takerNullifierHash.substring(0, 16)}...` +
+          `\n  MM nullifier: ${mmNullifierHash.substring(0, 16)}...`
+        );
+        
         settlementResult = await settlementService.executeSettlement({
-          commitment,
-          nullifierHash: nullifierData.nullifierHash,
-          recipient: quote.market_maker_public_key,
-          amount: quoteRequest.amount_commitment,
+          takerCommitment,
+          marketMakerCommitment: mmCommitment,
+          takerAddress,
+          marketMakerAddress: quote.market_maker_address,
+          assetAmount: assetAmountFinal,
+          paymentAmount: paymentAmountFinal,
+          assetToken: assetTokenFormatted,
+          paymentToken: paymentTokenFormatted,
           chainId,
+          takerNullifierHash,
+          marketMakerNullifierHash: mmNullifierHash,
         });
 
         if (!settlementResult.success) {
@@ -959,10 +1118,19 @@ export class RFQService {
         console.log(
           `[RFQService] Settlement successful: txHash=${settlementResult.txHash}`
         );
+
+        // NOTE: Nullifier tracking is now handled by Obscura-LLMS backend
+        // Dark OTC only validates, does not save
+        
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new Error(`Settlement execution failed: ${errorMessage}`);
       }
+    } else if (takerCommitment || takerAddress || takerNullifierHash || chainId) {
+      // Partial parameters provided - this is an error
+      throw new Error(
+        'Settlement requires all parameters: takerCommitment, takerAddress, takerNullifierHash, and chainId'
+      );
     }
 
     // Requirement 3.7: Mark quote request as filled and quote as accepted (atomic)

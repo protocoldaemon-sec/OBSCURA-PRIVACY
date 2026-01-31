@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Obscura",
+    "slug": "obscura-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo/512x512.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "obscura",
+    "splash": {
+      "image": "./assets/logo/512x512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.obscura.wallet",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "phantom",
+          "solflare",
+          "backpack",
+          "metamask",
+          "rainbow",
+          "trust"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo/512x512.png",
+        "backgroundColor": "#0A0A0F"
+      },
+      "package": "app.obscura.wallet",
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "obscura"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 23
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "obscura-wallet"
+      }
+    }
+  }
+}

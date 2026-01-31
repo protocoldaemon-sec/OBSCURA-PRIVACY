@@ -1,0 +1,207 @@
+2026-01-27T10:13:17.000000000Z [inf]  Starting Container
+2026-01-27T10:13:20.105577023Z [err]  bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+2026-01-27T10:13:20.105595580Z [inf]  [dotenv@17.2.3] injecting env (0) from ../.env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+2026-01-27T10:13:20.105764922Z [inf]  [SolanaSettlement] Initialized with payer: BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh
+2026-01-27T10:13:20.105777678Z [inf]  [SolanaSettlement] Program ID: GG9U34H1xXkuzvv8Heoy4UWav5vUgrQFEVwrYMi84QuE
+2026-01-27T10:13:20.105780046Z [err]  serveStatic: root path './public' is not found, are you sure it's correct?
+2026-01-27T10:13:20.105791526Z [inf]  Initializing services...
+2026-01-27T10:13:20.105800586Z [inf]  ✅ ZK Privacy Pool initialized (Merkle tree depth: 20)
+2026-01-27T10:13:20.105806006Z [inf]  [SolanaSettlement] Vault PDA: 6owJu2yXoPvTbM67XwmRguVRQhCADaswHkAVhVHSvoH7
+2026-01-27T10:13:20.105811254Z [inf]  Privacy: DUAL layer - Whitepaper flow + ZK anonymity set
+2026-01-27T10:13:20.105815316Z [inf]  [SolanaSettlement] Vault State PDA: 5L1Vh6ftZWncYc1SEdZsoEX4DKaqCY6ZoQ3CdcEqursB
+2026-01-27T10:13:20.105820124Z [inf]  Bridge: SIP commitments automatically mapped to ZK notes
+2026-01-27T10:13:20.105835473Z [inf]  [MXE] Arcium SDK loaded successfully
+2026-01-27T10:13:20.105845616Z [inf]  [MXE] Connected to cluster offset 456 (REAL SDK - RescueCipher)
+2026-01-27T10:13:20.105852907Z [inf]  [MXE] Program ID: arcaborPMqYhZbLqPKPRXpBKyCMgH8kApNoxp4cLKg
+2026-01-27T10:13:20.105863459Z [inf]  [Arcium] Connected to cluster offset 456 on devnet
+2026-01-27T10:13:20.105872063Z [inf]  [cSPL Real] Connecting to MXE cluster offset 456...
+2026-01-27T10:13:20.105882289Z [inf]  [cSPL Real] ✅ Connected to MXE cluster
+2026-01-27T10:13:20.105894294Z [inf]  ✅ Arcium MPC + cSPL initialized
+2026-01-27T10:13:20.105902674Z [inf]  Cluster offset: 456
+2026-01-27T10:13:20.105915982Z [inf]  csplClient created: true
+2026-01-27T10:13:20.105924528Z [inf]  TRUE Privacy: Encrypted balances + confidential transfers
+2026-01-27T10:13:21.230077266Z [inf]  Solana settlement service initialized
+2026-01-27T10:13:21.230083781Z [inf]  Solana payer balance: 0.358896991 SOL
+2026-01-27T10:13:21.230090778Z [inf]  [EVMSettlement] Initialized with account: 0xAceFd1C9BE6966204589518C2E3e4f6B2486169A
+2026-01-27T10:13:21.230096635Z [inf]  [EVMSettlement] Vault: 0xc4937Ba6418eE72EDABF72694198024b5a3599CC
+2026-01-27T10:13:21.230107430Z [inf]  [EVMSettlement] Settlement: 0x88dA9c5D9801cb33615f0A516eb1098dF1889DA9
+2026-01-27T10:13:21.230113410Z [inf]  EVM settlement service initialized
+2026-01-27T10:13:21.230119984Z [inf]  ETH payer address: 0xAceFd1C9BE6966204589518C2E3e4f6B2486169A
+2026-01-27T10:13:21.230126349Z [inf]  Vault owner: 0xAceFd1C9BE6966204589518C2E3e4f6B2486169A
+2026-01-27T10:13:21.230132838Z [inf]  Vault settlement: 0xAceFd1C9BE6966204589518C2E3e4f6B2486169A
+2026-01-27T10:13:21.230139073Z [inf]  Is owner: true, Is settlement: true
+2026-01-27T10:13:21.230146353Z [inf]  [Light] Using Solana RPC for transactions, Helius for Photon indexer
+2026-01-27T10:13:21.230152336Z [inf]  [Light] Connected to Solana 3.1.6
+2026-01-27T10:13:21.230158526Z [inf]  [Light] Payer: DXt5J27KBRyATSoofZ2zSFu56bUBN6SpwTyQAvioxEZx
+2026-01-27T10:13:21.230165364Z [inf]  [Light] Balance: 13.1030882 SOL
+2026-01-27T10:13:21.230171374Z [inf]  ✅ Light Protocol ZK Compression initialized
+2026-01-27T10:13:21.230177094Z [inf]  Light Payer: DXt5J27KBRyATSoofZ2zSFu56bUBN6SpwTyQAvioxEZx
+2026-01-27T10:13:21.230182201Z [inf]  [SolanaSettlement] Initialized with payer: BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh
+2026-01-27T10:13:21.230187339Z [inf]  [SolanaSettlement] Program ID: GG9U34H1xXkuzvv8Heoy4UWav5vUgrQFEVwrYMi84QuE
+2026-01-27T10:13:21.230193152Z [inf]  [SolanaSettlement] Vault PDA: 6owJu2yXoPvTbM67XwmRguVRQhCADaswHkAVhVHSvoH7
+2026-01-27T10:13:21.230197984Z [inf]  [SolanaSettlement] Vault State PDA: 5L1Vh6ftZWncYc1SEdZsoEX4DKaqCY6ZoQ3CdcEqursB
+2026-01-27T10:13:21.230203531Z [inf]  [Executor] Solana settlement service enabled
+2026-01-27T10:13:22.138282269Z [inf]  Services initialized
+2026-01-27T10:13:22.138289434Z [inf]  
+2026-01-27T10:13:22.170525357Z [inf]  ╔═══════════════════════════════════════════════════════════╗
+2026-01-27T10:13:22.170537461Z [inf]  ║           Winternitz-SIP API Server                       ║
+2026-01-27T10:13:22.170561902Z [inf]  ╠═══════════════════════════════════════════════════════════╣
+2026-01-27T10:13:22.170573531Z [inf]  ║  Status:  Running                                         ║
+2026-01-27T10:13:22.170581209Z [inf]  ║  Port:    3000                                            ║
+2026-01-27T10:13:22.170589072Z [inf]  ║  Docs:    http://localhost:3000/                          ║
+2026-01-27T10:13:22.170597018Z [inf]  ╚═══════════════════════════════════════════════════════════╝
+2026-01-27T10:13:22.170604521Z [inf]    
+2026-01-27T10:13:22.170612587Z [inf]  <-- GET /health
+2026-01-27T10:13:22.170621735Z [inf]  --> GET /health [32m200[0m 2ms
+2026-01-27T10:13:41.334061723Z [inf]  --> GET /health [32m200[0m 1ms
+2026-01-27T10:13:41.334074842Z [inf]  <-- GET /api/v1/batches
+2026-01-27T10:13:41.334082647Z [inf]  --> GET /api/v1/batches [32m200[0m 2ms
+2026-01-27T10:13:41.334093083Z [inf]  <-- GET /
+2026-01-27T10:13:41.334099853Z [inf]  --> GET / [32m200[0m 0ms
+2026-01-27T10:13:41.334665641Z [inf]  <-- GET /health
+2026-01-27T10:13:49.850941182Z [inf]  <-- GET /
+2026-01-27T10:13:49.850948291Z [inf]  --> GET / [32m200[0m 0ms
+2026-01-27T10:13:49.850954901Z [inf]  <-- GET /health
+2026-01-27T10:13:49.850961469Z [inf]  --> GET /health [32m200[0m 1ms
+2026-01-27T10:13:49.850967505Z [inf]  <-- GET /api/v1/batches
+2026-01-27T10:13:49.850974167Z [inf]  --> GET /api/v1/batches [32m200[0m 1ms
+2026-01-27T10:14:08.979506723Z [inf]  <-- POST /api/v1/deposit
+2026-01-27T10:14:08.979515310Z [inf]  [Deposit] Creating deposit with DUAL privacy layer...
+2026-01-27T10:14:08.979524073Z [inf]  [Deposit] Amount: 1
+2026-01-27T10:14:08.979537257Z [inf]  [Deposit] Token: native
+2026-01-27T10:14:08.979547083Z [inf]  [Deposit] Chain: solana
+2026-01-27T10:14:08.979556489Z [inf]  [Deposit] ✅ SIP intent created (whitepaper flow)
+2026-01-27T10:14:08.979566445Z [inf]  [Deposit] Commitment: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:08.979575991Z [inf]  [Deposit] Stealth address: b1199355921057b3...
+2026-01-27T10:14:08.979585520Z [inf]  [ZKPrivacy] Deposit added to tree
+2026-01-27T10:14:08.979594743Z [inf]  [ZKPrivacy] Leaf index: 0
+2026-01-27T10:14:08.979604651Z [inf]  [ZKPrivacy] Tree size: 1
+2026-01-27T10:14:08.979613646Z [inf]  [ZKPrivacy] Merkle root: 8751246540356381...
+2026-01-27T10:14:08.979623011Z [inf]  [Deposit] ✅ Added to ZK Privacy Pool (Merkle tree)
+2026-01-27T10:14:08.979640068Z [inf]  [Deposit] Leaf index: 0
+2026-01-27T10:14:08.979649958Z [inf]  [Deposit] Anonymity set: 1 deposits
+2026-01-27T10:14:08.979659147Z [inf]  [Deposit] Bridge: SIP commitment → ZK note mapped
+2026-01-27T10:14:08.979668883Z [inf]  [Deposit] DEBUG - csplClient exists: true
+2026-01-27T10:14:08.979678378Z [inf]  [Deposit] DEBUG - body.network: solana
+2026-01-27T10:14:08.979687186Z [inf]  [Deposit] DEBUG - includes('solana'): true
+2026-01-27T10:14:08.979696442Z [inf]  [Deposit] Using Arcium cSPL for TRUE privacy...
+2026-01-27T10:14:08.979706053Z [inf]  [cSPL Real] Initializing confidential account for MqFdeJsR...
+2026-01-27T10:14:08.979716182Z [inf]  [cSPL Real] ✅ Confidential account: 52a30fba443b5067...
+2026-01-27T10:14:08.979725832Z [inf]  [cSPL Real] Depositing 1000000000 to confidential account...
+2026-01-27T10:14:08.979734614Z [inf]  [cSPL Real] ✅ Amount encrypted with Rescue cipher
+2026-01-27T10:14:08.979743955Z [inf]  [cSPL Real] Ciphertext: 380a315be7ca5cd30978494dcba43e0b...
+2026-01-27T10:14:10.005495343Z [inf]  [BalanceTracker] Deposit recorded: 52a30fba443b5067...
+2026-01-27T10:14:10.005502101Z [inf]  [BalanceTracker] Amount: 1000000000 (encrypted)
+2026-01-27T10:14:10.005508458Z [inf]  [BalanceTracker] SIP commitment mapped: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:10.005518894Z [inf]  [Deposit] ✅ Arcium cSPL deposit created
+2026-01-27T10:14:10.005526449Z [inf]  [Deposit] Confidential account: 52a30fba443b5067...
+2026-01-27T10:14:10.005535675Z [inf]  [Deposit] Balance: ENCRYPTED (hidden from observers)
+2026-01-27T10:14:10.005542520Z [inf]  [Deposit] On-chain: Only ciphertext visible
+2026-01-27T10:14:10.005550334Z [inf]  [Deposit] Off-chain: Balance tracked for withdrawal verification
+2026-01-27T10:14:10.005557765Z [inf]  [Light] Cached deposit data for commitment: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:10.005566938Z [inf]  [Light] Compressing deposit record
+2026-01-27T10:14:10.005575185Z [inf]  [Light] Commitment: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:10.005582044Z [inf]  [Light] Amount: 1
+2026-01-27T10:14:10.005588683Z [inf]  [Light] ✅ Deposit compressed: 3nan7mtrr7XKRBgH1gMPtwdSpY1keRqR9oAoY67nJRzg3ajyT3y84Vfc5Chu5oPtB3pcipmz8MGBx82TDd6TfP28
+2026-01-27T10:14:10.005605721Z [inf]  [Light] Depositor info hidden from vault history
+2026-01-27T10:14:10.005612586Z [inf]  [Deposit] ✅ Depositor info compressed (Light Protocol)
+2026-01-27T10:14:10.005621268Z [inf]  --> POST /api/v1/deposit [32m201[0m 5s
+2026-01-27T10:14:19.944383713Z [inf]  <-- POST /api/v1/withdraw
+2026-01-27T10:14:19.944391337Z [inf]  [Withdraw] Checking if nullifier is used in Dark OTC settlements...
+2026-01-27T10:14:19.944397959Z [inf]  [Nullifier Check] Querying Dark OTC API: https://otc-api.obscura-app.com/api/v1/rfq/check-nullifier/0x48a2cabd47a2c9...
+2026-01-27T10:14:19.944406011Z [inf]  <-- GET /
+2026-01-27T10:14:19.944412964Z [inf]  --> GET / [32m200[0m 1ms
+2026-01-27T10:14:19.944424603Z [inf]  <-- GET /health
+2026-01-27T10:14:19.944437544Z [inf]  --> GET /health [32m200[0m 0ms
+2026-01-27T10:14:19.944445062Z [inf]  <-- GET /api/v1/batches
+2026-01-27T10:14:19.944453622Z [inf]  --> GET /api/v1/batches [32m200[0m 0ms
+2026-01-27T10:14:20.885445520Z [inf]  [Nullifier Check] Result: { isUsed: false }
+2026-01-27T10:14:20.885450104Z [inf]  [Withdraw] ✅ Nullifier not used in Dark OTC, proceeding with withdrawal...
+2026-01-27T10:14:20.885454399Z [inf]  [Withdraw] Processing withdrawal with DUAL privacy verification...
+2026-01-27T10:14:20.885460417Z [inf]  [Withdraw] Chain: solana-devnet
+2026-01-27T10:14:20.885465320Z [inf]  [Withdraw] Recipient: MqFdeJsRooZGgSwAsCeRnZ3y8v4CL9xpZDRNxbaQ8VN
+2026-01-27T10:14:20.885471143Z [inf]  [Withdraw] Amount: 1000000000
+2026-01-27T10:14:20.885477202Z [inf]  [Withdraw] Commitment: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:20.885484309Z [inf]  [Withdraw] Found ZK deposit note via bridge mapping
+2026-01-27T10:14:20.885490612Z [inf]  [Withdraw] Generated Merkle proof
+2026-01-27T10:14:20.885496331Z [inf]  [Withdraw] Root: 8751246540356381...
+2026-01-27T10:14:20.885503086Z [err]  [Withdraw] ZK proof verification failed: Invalid Merkle proof
+2026-01-27T10:14:20.885509249Z [err]  [Withdraw] Continuing with Arcium cSPL verification...
+2026-01-27T10:14:20.885517879Z [inf]  [Withdraw] Token: SOL (9 decimals)
+2026-01-27T10:14:20.885524529Z [inf]  [Light] Found compressed deposit for commitment: 8e5fa3c01b0a4b8d...
+2026-01-27T10:14:20.885532037Z [inf]  [Withdraw] ✅ Verified compressed deposit (Light Protocol)
+2026-01-27T10:14:20.885538410Z [inf]  [Withdraw] Original depositor: MqFdeJsR... (hidden from recipient)
+2026-01-27T10:14:20.885543393Z [inf]  [Withdraw] Executing Solana withdrawal via relayer...
+2026-01-27T10:14:20.885548557Z [inf]  [Withdraw] Original: 1 SOL
+2026-01-27T10:14:20.885553254Z [inf]  [Withdraw] Fee (0.1%): 0.001 SOL
+2026-01-27T10:14:20.885558139Z [inf]  [Withdraw] Net to recipient: 0.999 SOL
+2026-01-27T10:14:20.885567076Z [inf]  [Withdraw] Using Arcium cSPL for TRUE privacy withdrawal...
+2026-01-27T10:14:20.885572236Z [inf]  [Withdraw] Found confidential account: 52a30fba443b5067...
+2026-01-27T10:14:20.891333275Z [err]  ]. 
+2026-01-27T10:14:20.891349544Z [inf]  [SolanaSettlement] Amount: 0.999 SOL
+2026-01-27T10:14:20.891355757Z [err]  [SolanaSettlement] Direct transfer failed: SendTransactionError: Simulation failed. 
+2026-01-27T10:14:20.891358473Z [err]  Message: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1. 
+2026-01-27T10:14:20.891365224Z [err]  Logs: 
+2026-01-27T10:14:20.891371391Z [err]  [
+2026-01-27T10:14:20.891384959Z [err]    "Program 11111111111111111111111111111111 invoke [1]",
+2026-01-27T10:14:20.891390934Z [err]    "Transfer: insufficient lamports 358891991, need 999000000",
+2026-01-27T10:14:20.891395828Z [inf]    "Program 11111111111111111111111111111111 failed: custom program error: 0x1"
+2026-01-27T10:14:20.891405822Z [inf]  [Withdraw] From: Relayer (off-chain balance verified)
+2026-01-27T10:14:20.891412588Z [inf]  [Withdraw] To: MqFdeJsRooZGgSwA... (direct)
+2026-01-27T10:14:20.891418529Z [inf]  [Withdraw] Method: Off-chain balance tracking + direct transfer
+2026-01-27T10:14:20.891424375Z [inf]  [cSPL Real] Withdrawing 999000000 from confidential account...
+2026-01-27T10:14:20.891429942Z [inf]  [cSPL Real] ✅ Withdrawal instruction created
+2026-01-27T10:14:20.891435936Z [inf]  [SolanaSettlement] Executing direct transfer (NO VAULT PDA)
+2026-01-27T10:14:20.891443778Z [inf]  [SolanaSettlement] From: BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh
+2026-01-27T10:14:20.891450651Z [inf]  [SolanaSettlement] To: MqFdeJsRooZGgSwAsCeRnZ3y8v4CL9xpZDRNxbaQ8VN
+2026-01-27T10:14:20.891451129Z [inf]  [BalanceTracker] Withdrawal verified for 52a30fba443b5067...
+2026-01-27T10:14:20.891458749Z [inf]  [BalanceTracker] Available: 1000000000, Requested: 999000000
+2026-01-27T10:14:20.891464081Z [inf]  [Withdraw] ✅ Withdrawal verified off-chain
+2026-01-27T10:14:20.891469473Z [inf]  [Withdraw] ✅ Using DIRECT transfer (no vault PDA)
+2026-01-27T10:14:20.891946341Z [err]  Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+2026-01-27T10:14:20.892280703Z [err]      at Connection.sendEncodedTransaction (/app/node_modules/.pnpm/@solana+web3.js@1.98.4_bufferutil@4.1.0_typescript@5.9.3_utf-8-validate@5.0.10/node_modules/@solana/web3.js/lib/index.cjs.js:8208:13)
+2026-01-27T10:14:20.892288959Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-01-27T10:14:20.892296339Z [err]      at async Connection.sendRawTransaction (/app/node_modules/.pnpm/@solana+web3.js@1.98.4_bufferutil@4.1.0_typescript@5.9.3_utf-8-validate@5.0.10/node_modules/@solana/web3.js/lib/index.cjs.js:8173:20)
+2026-01-27T10:14:20.892307847Z [err]      at async Connection.sendTransaction (/app/node_modules/.pnpm/@solana+web3.js@1.98.4_bufferutil@4.1.0_typescript@5.9.3_utf-8-validate@5.0.10/node_modules/@solana/web3.js/lib/index.cjs.js:8164:12)
+2026-01-27T10:14:20.892315877Z [err]      at async sendAndConfirmTransaction (/app/node_modules/.pnpm/@solana+web3.js@1.98.4_bufferutil@4.1.0_typescript@5.9.3_utf-8-validate@5.0.10/node_modules/@solana/web3.js/lib/index.cjs.js:2273:21)
+2026-01-27T10:14:20.892324386Z [err]      at async SolanaSettlementService.directTransfer (file:///app/packages/backend/dist/solana/settlement.js:109:31)
+2026-01-27T10:14:20.892335505Z [err]      at async file:///app/packages/backend/dist/server.js:820:56
+2026-01-27T10:14:20.892345429Z [err]      at async dispatch (file:///app/node_modules/.pnpm/hono@4.11.7/node_modules/hono/dist/compose.js:22:17)
+2026-01-27T10:14:20.892354140Z [err]      at async logger2 (file:///app/node_modules/.pnpm/hono@4.11.7/node_modules/hono/dist/middleware/logger/index.js:38:5)
+2026-01-27T10:14:20.892362054Z [err]      at async dispatch (file:///app/node_modules/.pnpm/hono@4.11.7/node_modules/hono/dist/compose.js:22:17) {
+2026-01-27T10:14:20.892368915Z [err]    signature: '',
+2026-01-27T10:14:20.892376091Z [err]    transactionMessage: 'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1',
+2026-01-27T10:14:20.894844001Z [err]  ]. 
+2026-01-27T10:14:20.894869242Z [err]  Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+2026-01-27T10:14:20.894903517Z [inf]  [Withdraw] Falling back to regular Solana settlement (Vault PDA)...
+2026-01-27T10:14:20.894921219Z [inf]  [Withdraw] ⚠️ Privacy: WEAK - Vault PDA visible on-chain
+2026-01-27T10:14:20.894939818Z [inf]  [SolanaSettlement] Private claim 0.999 SOL to MqFdeJsRooZGgSwAsCeRnZ3y8v4CL9xpZDRNxbaQ8VN
+2026-01-27T10:14:20.894959203Z [inf]  [SolanaSettlement] Nullifier hash: 0x48a2cabd47a2c92a46a2c79745a2c604
+2026-01-27T10:14:20.894979811Z [inf]  [SolanaSettlement] Caller (relayer): BaizftZQKnWDWqsb8orBLHe4ffDGX4L561k92RKEC8sh
+2026-01-27T10:14:20.894995969Z [err]    transactionLogs: [
+2026-01-27T10:14:20.895003443Z [err]      'Program 11111111111111111111111111111111 invoke [1]',
+2026-01-27T10:14:20.895011283Z [err]      'Transfer: insufficient lamports 358891991, need 999000000',
+2026-01-27T10:14:20.895019196Z [err]      'Program 11111111111111111111111111111111 failed: custom program error: 0x1'
+2026-01-27T10:14:20.895026162Z [err]    ]
+2026-01-27T10:14:20.895033563Z [err]  }
+2026-01-27T10:14:20.895040719Z [err]  [Withdraw] Arcium cSPL withdrawal failed (non-critical): Direct transfer failed: Simulation failed. 
+2026-01-27T10:14:20.895048322Z [err]  Message: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1. 
+2026-01-27T10:14:20.895055466Z [err]  Logs: 
+2026-01-27T10:14:20.895062936Z [err]  [
+2026-01-27T10:14:20.895070411Z [err]    "Program 11111111111111111111111111111111 invoke [1]",
+2026-01-27T10:14:20.895078488Z [err]    "Transfer: insufficient lamports 358891991, need 999000000",
+2026-01-27T10:14:20.895088909Z [inf]    "Program 11111111111111111111111111111111 failed: custom program error: 0x1"
+2026-01-27T10:14:22.853005963Z [inf]  [Light] Data: {"type":"settlement","batchId":"withdraw_1769508862202_48a2cabd","chain":"solana","txHash":"3N1bT9Ug7NJULcJAF3DCcy5EtxiVpDEx75og1f2wH8ANyUY1QQZXcBuTa14fknYbN7Fbq6ocwgKwhKVhAY9Rt4JD","blockNumber":0,"status":"confirmed","gasUsed":"0","settledAt":1769508862202}
+2026-01-27T10:14:22.853017255Z [inf]  --> POST /api/v1/withdraw [32m201[0m 3s
+2026-01-27T10:14:22.853188024Z [inf]  [SolanaSettlement] Private claim successful: 3N1bT9Ug7NJULcJAF3DCcy5EtxiVpDEx75og1f2wH8ANyUY1QQZXcBuTa14fknYbN7Fbq6ocwgKwhKVhAY9Rt4JD
+2026-01-27T10:14:22.853194723Z [inf]  [Light] Compressing settlement record: withdraw_1769508862202_48a2cabd
+2026-01-27T10:14:23.973289823Z [inf]  [Withdraw] ✅ Settlement stored via ZK Compression
+2026-01-27T10:14:23.973316720Z [inf]  [Light] ✅ Settlement compressed: 5HhVsR9jydk33Vv3d7QWQAuVDi4hTsjfVCHWgm5EwAqKPvYUguDdxHDegminZxgcgAQofng95N6LjohxbBUoCirq
+2026-01-27T10:14:23.973322888Z [inf]  [Light] View on Photon: https://photon.helius.dev/tx/5HhVsR9jydk33Vv3d7QWQAuVDi4hTsjfVCHWgm5EwAqKPvYUguDdxHDegminZxgcgAQofng95N6LjohxbBUoCirq?cluster=devnet
+2026-01-27T10:14:23.973329218Z [inf]  [Light] View on Explorer: https://explorer.solana.com/tx/5HhVsR9jydk33Vv3d7QWQAuVDi4hTsjfVCHWgm5EwAqKPvYUguDdxHDegminZxgcgAQofng95N6LjohxbBUoCirq?cluster=devnet
+2026-01-27T10:14:54.030253686Z [inf]  --> GET /health [32m200[0m 0ms
+2026-01-27T10:14:54.030262345Z [inf]  <-- GET /api/v1/batches
+2026-01-27T10:14:54.030262931Z [inf]  <-- GET /health
+2026-01-27T10:14:54.030270016Z [inf]  --> GET /api/v1/batches [32m200[0m 0ms
+2026-01-27T10:14:54.030280814Z [inf]  <-- GET /
+2026-01-27T10:14:54.030287630Z [inf]  --> GET / [32m200[0m 0ms

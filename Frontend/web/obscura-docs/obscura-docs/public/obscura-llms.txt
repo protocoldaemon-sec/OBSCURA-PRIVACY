@@ -7,7 +7,7 @@ Obscura is a post-quantum secure intent settlement system combining:
 - SIP (Shielded Intent Protocol) for privacy-preserving transactions
 - Stealth addresses for unlinkable payments
 - Pedersen commitments for hidden amounts
-- **Relayer Network** for true end-to-end privacy
+- **Relayer Network** for true endlogs.1769431551612.log-to-end privacy
 - **Nullifier-based claims** for trustless withdrawals
 
 Base URL: https://api.obscura-app.com
@@ -327,9 +327,15 @@ Get API information and available endpoints.
 Response:
 {
   "name": "Obscura API",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Post-quantum secure intent settlement API with true privacy",
   "changelog": {
+    "0.5.2": [
+      "Balance query endpoint (POST /api/v1d:\script\express\obscura-dark-otc-be\obscura-dark-otc-rfq-llms.txtd:\script\express\obscura-dark-otc-be\obscura-dark-otc-rfq-llms.txt)",
+      "Real-time vault balance updates from Arcium cSPL",
+      "Dark OTC integration with automatic balance refresh",
+      "Off-chain balance verification without on-chain queries"
+    ],
     "0.5.1": [
       "Minimum deposit requirement (0.0003 SOL/ETH)",
       "Frontend validation enhancements",
@@ -356,6 +362,7 @@ Response:
     "solana": "/api/v1/solana/status",
     "evm": "/api/v1/evm/status",
     "deposit": "/api/v1/deposit",
+    "balance": "/api/v1/balance",
     "withdraw": "/api/v1/withdraw",
     "batches": "/api/v1/batches",
     "relayer": "/api/v1/relayer"
@@ -525,6 +532,73 @@ Error Response (400) - Amount Too Low:
 ⚠️ IMPORTANT: 
 - User must save `nullifier` and `secret` - these are needed for withdrawal!
 - Minimum deposit: 0.0003 SOL or 0.0003 ETH (to cover relayer fees and gas)
+
+---
+
+### 6.1. POST /api/v1/balance
+Query vault balance from Arcium cSPL off-chain balance tracker.
+
+**Purpose:** Get current vault balance after deposits/withdrawals. This queries the Arcium cSPL encrypted balance, NOT the wallet balance.
+
+**Why This Endpoint?**
+- After settlement, vault balance updates in Arcium cSPL (off-chain)
+- Frontend needs to query actual vault balance, not just localStorage
+- Enables real-time balance display after Dark OTC trades
+
+Request Body (JSON):
+{
+  "commitment": "string",     // REQUIRED: From deposit note
+  "chainId": "string"         // REQUIRED: solana-devnet (only Solana supported)
+}
+
+Success Response (200):
+{
+  "success": true,
+  "balance": "1200000000",              // Available balance in base units (lamports)
+  "pendingBalance": "0",                // Pending withdrawals
+  "confidentialAccount": "5599a875...", // Arcium cSPL account address
+  "encrypted": true,                    // Balance is encrypted on-chain
+  "token": "native",                    // Token type (native = SOL)
+  "deposits": 1,                        // Number of deposits
+  "withdrawals": 0                      // Number of withdrawals
+}
+
+Error Response (404) - No Balance Found:
+{
+  "success": false,
+  "error": "No vault balance found for this commitment",
+  "details": "Please deposit first to create a vault balance"
+}
+
+Error Response (400) - Wrong Chain:
+{
+  "success": false,
+  "error": "Balance query only supported on Solana (Arcium cSPL)",
+  "details": "EVM chains do not support off-chain balance tracking yet"
+}
+
+**Example Usage:**
+```typescript
+// Query vault balance after deposit or settlement
+const response = await fetch('https://api.obscura-app.com/api/v1/balance', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    commitment: 'b4083a81a64f7bf5...',
+    chainId: 'solana-devnet'
+  })
+});
+
+const result = await response.json();
+console.log('Vault balance:', result.balance / 1e9, 'SOL');
+console.log('Confidential account:', result.confidentialAccount);
+```
+
+**Notes:**
+- Balance is stored off-chain in Arcium cSPL (encrypted)
+- Updates automatically after deposits/withdrawals/settlements
+- Only Solana supported (Arcium cSPL is Solana-only)
+- Returns balance in base units (lamports for SOL, divide by 1e9 for display)
 
 ---
 
@@ -1029,7 +1103,14 @@ When `zkCompressed: false` (ETH or compression failed):
 
 ## CHANGELOG
 
-### v0.5.1 (Current)
+### v0.5.2 (Current)
+- ✅ **Balance Query Endpoint**: New `POST /api/v1/balance` endpoint to query Arcium cSPL off-chain balance
+- ✅ **Real-Time Balance Updates**: Frontend queries vault balance from API after settlements
+- ✅ **Dark OTC Integration**: Vault balance updates automatically after Dark OTC trades
+- ✅ **Off-Chain Balance Verification**: Balance tracker provides encrypted balance without on-chain queries
+- ✅ **Solana-Only Support**: Balance query only available for Solana (Arcium cSPL)
+
+### v0.5.1
 - ✅ **Minimum Deposit Requirement**: 0.0003 SOL/ETH minimum to cover relayer fees and gas
 - ✅ **Frontend Validation**: Real-time validation with warning for amounts below minimum
 - ✅ **Loading Modal Enhancement**: Green spinning animation at 100% completion before close
